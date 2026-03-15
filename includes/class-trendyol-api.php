@@ -83,7 +83,7 @@ class HBT_Trendyol_API {
 	 * @param  int      $size       Page size.
 	 * @return array|WP_Error
 	 */
-	public function get_orders( int $start_date, int $end_date, ?int $page = null, int $size = 100 ) {
+	public function get_orders( int $start_date, int $end_date, ?int $page = null, int $size = 200 ) {
 		$params = array(
 			'startDate'        => $start_date,
 			'endDate'          => $end_date,

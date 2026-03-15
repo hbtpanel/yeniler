@@ -35,7 +35,7 @@ class HBT_Cron_Manager {
 	 * @var array
 	 */
 	private array $events = array(
-		'hbt_sync_orders_fast'       => 'hbt_every_15_min', // YENİ: Hızlı Döngü (Son 24 Saat)
+		'hbt_sync_orders_fast'       => 'hbt_every_5_min', // Hızlı Döngü 5 dakikaya çekildi
 		'hbt_sync_orders_deep'       => 'hbt_every_6_hours', // YENİ: Derin Döngü (Son 15 Gün)
 		'hbt_sync_currency'          => 'hourly',
 		'hbt_sync_financials'        => 'hbt_every_6_hours',
@@ -110,6 +110,11 @@ class HBT_Cron_Manager {
 	 * @return array
 	 */
 	public function add_custom_intervals( array $schedules ): array {
+		$schedules['hbt_every_5_min'] = array(
+			'interval' => 5 * MINUTE_IN_SECONDS,
+			'display'  => __( 'Every 5 Minutes', 'hbt-trendyol-profit-tracker' ),
+		);
+
 		$schedules['hbt_every_15_min'] = array(
 			'interval' => 15 * MINUTE_IN_SECONDS,
 			'display'  => __( 'Every 15 Minutes', 'hbt-trendyol-profit-tracker' ),
@@ -215,7 +220,7 @@ class HBT_Cron_Manager {
 			return;
 		}
 
-		$max_jobs_per_run = 2; // Daha güvenli olması için 2'ye çektik
+		$max_jobs_per_run = 6; // Dakikada 6 görev işleyerek hızı 3 katına çıkardık
 		$changed = false;
 
 		for ( $i = 0; $i < $max_jobs_per_run && ! empty( $queue ); $i++ ) {
@@ -229,7 +234,7 @@ class HBT_Cron_Manager {
 			}
 
 			$page = isset( $job['page'] ) ? (int) $job['page'] : 0;
-			$size = isset( $job['size'] ) ? (int) $job['size'] : 100;
+			$size = isset( $job['size'] ) ? (int) $job['size'] : 200;
 			$sync_type = isset( $job['sync_type'] ) ? $job['sync_type'] : 'manual';
 
 			$result = $this->sync_store_orders( $store, $page, $size, $job['start_date'] ?? null, $job['end_date'] ?? null );
@@ -335,11 +340,12 @@ class HBT_Cron_Manager {
 		$tz = new DateTimeZone('Europe/Istanbul');
 		$dt = new DateTime('now', $tz);
 		$end_date = $dt->format('Y-m-d\TH:i:s');
-		$dt->modify('-3 hours'); // Sunucuyu yormamak için 1 günü 12 saate düşürdük
+		$dt->modify('-6 hours'); // Hızlı tarama süresi 6 saate çıkarıldı
 		$start_date = $dt->format('Y-m-d\TH:i:s');
 		
 		foreach ( $stores as $store ) {
-			$this->enqueue_store_sync( $store, $start_date, $end_date, 0, 100, 'auto_fast' );
+			// Limit 100'den 200'e çıkarıldı
+			$this->enqueue_store_sync( $store, $start_date, $end_date, 0, 200, 'auto_fast' );
 		}
 	}
 
@@ -355,7 +361,7 @@ class HBT_Cron_Manager {
 		$start_date = $dt->format('Y-m-d\TH:i:s');
 		
 		foreach ( $stores as $store ) {
-			$this->enqueue_store_sync( $store, $start_date, $end_date, 0, 100, 'auto_deep' );
+			$this->enqueue_store_sync( $store, $start_date, $end_date, 0, 200, 'auto_deep' );
 		}
 	}
 
