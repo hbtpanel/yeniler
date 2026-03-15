@@ -38,6 +38,10 @@ class HBT_Admin_Menu {
 		add_action( 'wp_ajax_hbt_export_orders', array( $this, 'ajax_export_orders' ) );
 		add_action( 'wp_ajax_hbt_save_profit_goal', array( $this, 'ajax_save_profit_goal' ) );
 		add_action( 'wp_ajax_hbt_save_settings', array( $this, 'ajax_save_settings' ) );
+		add_action( 'wp_ajax_hbt_check_dashboard_updates', array( $this, 'ajax_check_dashboard_updates' ) );
+		// iOS Web App ve UI İyileştirmeleri (SaaS App Deneyimi)
+		add_action( 'admin_head', array( $this, 'ios_app_meta_and_css' ) );
+		add_action( 'admin_footer', array( $this, 'ios_app_menu_js' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_hbt_test_connection', array( $this, 'ajax_test_connection' ) );
@@ -914,13 +918,55 @@ public function ajax_bulk_import_costs(): void {
         $stats_week  = $db->get_profit_stats( $week, $today );
         $stats_month = $db->get_profit_stats( $month, $today );
 
-        $stats_yesterday  = $db->get_profit_stats( $yesterday, $yesterday );
+       $stats_yesterday  = $db->get_profit_stats( $yesterday, $yesterday );
         $stats_last_week  = $db->get_profit_stats( $last_week_start, $last_week_end );
         $stats_last_month = $db->get_profit_stats( $last_month_start, $last_month_end );
 
-        // Mağaza Bazlı Bugünkü Kâr (İptal ve iadeler hariç)
+        // --- YENİ: TREND BALONLARI İÇİN "BU SAATE KADAR" VERİLERİ ---
+        $current_time = $dt_today->format('H:i:s');
+        
+        // 1. Dün bu saate kadar
+        $stats_yesterday_upto_now = $wpdb->get_row( $wpdb->prepare(
+            "SELECT COALESCE(SUM(net_profit), 0) AS net_profit, COALESCE(SUM(total_price), 0) AS revenue FROM {$wpdb->prefix}hbt_orders WHERE order_date BETWEEN %s AND %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
+            $yesterday . ' 00:00:00', $yesterday . ' ' . $current_time
+        ), ARRAY_A );
+        $yesterday_ad = $wpdb->get_var($wpdb->prepare("SELECT SUM(daily_amount) FROM {$wpdb->prefix}hbt_ad_expenses WHERE start_date <= %s AND end_date >= %s", $yesterday, $yesterday));
+        $stats_yesterday_upto_now['net_profit'] -= (float) $yesterday_ad;
+
+        // 2. Geçen Hafta bu saate kadar (Geçen haftanın aynı gününün aynı saatine kadar)
+        $dt_last_week_same_day = clone $dt_today;
+        $dt_last_week_same_day->modify('-7 days');
+        $last_week_same_day_end = $dt_last_week_same_day->format('Y-m-d H:i:s');
+        $stats_last_week_upto_now = $wpdb->get_row( $wpdb->prepare(
+            "SELECT COALESCE(SUM(net_profit), 0) AS net_profit, COALESCE(SUM(total_price), 0) AS revenue FROM {$wpdb->prefix}hbt_orders WHERE order_date BETWEEN %s AND %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
+            $last_week_start . ' 00:00:00', $last_week_same_day_end
+        ), ARRAY_A );
+        $lw_end_date = $dt_last_week_same_day->format('Y-m-d');
+        $lw_ad = $wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(daily_amount * (DATEDIFF(LEAST(end_date, %s), GREATEST(start_date, %s)) + 1)) FROM {$wpdb->prefix}hbt_ad_expenses WHERE start_date <= %s AND end_date >= %s",
+            $lw_end_date, $last_week_start, $lw_end_date, $last_week_start
+        ));
+        $stats_last_week_upto_now['net_profit'] -= (float) $lw_ad;
+
+        // 3. Geçen Ay bu saate kadar (Geçen ayın aynı gününün aynı saatine kadar)
+        $dt_last_month_same_day = clone $dt_today;
+        $dt_last_month_same_day->modify('-1 month');
+        $last_month_same_day_end = $dt_last_month_same_day->format('Y-m-d H:i:s');
+        $stats_last_month_upto_now = $wpdb->get_row( $wpdb->prepare(
+            "SELECT COALESCE(SUM(net_profit), 0) AS net_profit, COALESCE(SUM(total_price), 0) AS revenue FROM {$wpdb->prefix}hbt_orders WHERE order_date BETWEEN %s AND %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
+            $last_month_start . ' 00:00:00', $last_month_same_day_end
+        ), ARRAY_A );
+        $lm_end_date = $dt_last_month_same_day->format('Y-m-d');
+        $lm_ad = $wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(daily_amount * (DATEDIFF(LEAST(end_date, %s), GREATEST(start_date, %s)) + 1)) FROM {$wpdb->prefix}hbt_ad_expenses WHERE start_date <= %s AND end_date >= %s",
+            $lm_end_date, $last_month_start, $lm_end_date, $last_month_start
+        ));
+        $stats_last_month_upto_now['net_profit'] -= (float) $lm_ad;
+        // --- BİTİŞ ---
+
+       // Mağaza Bazlı Bugünkü Kâr ve Ciro (İptal ve iadeler hariç)
         $stores_today = $wpdb->get_results( $wpdb->prepare(
-            "SELECT s.id, s.store_name, COALESCE(SUM(o.net_profit), 0) as profit 
+            "SELECT s.id, s.store_name, COALESCE(SUM(o.net_profit), 0) as profit, COALESCE(SUM(o.total_price), 0) as revenue 
              FROM {$wpdb->prefix}hbt_stores s
              LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
                 AND o.order_date BETWEEN %s AND %s 
@@ -936,9 +982,9 @@ public function ajax_bulk_import_costs(): void {
             $st['profit'] -= (float) $ad_cost;
         }
 
-        // Mağaza Bazlı Dünkü Kâr (İptal ve iadeler hariç)
+        // Mağaza Bazlı Dünkü Kâr ve Ciro (İptal ve iadeler hariç)
         $stores_yesterday = $wpdb->get_results( $wpdb->prepare(
-            "SELECT s.id, s.store_name, COALESCE(SUM(o.net_profit), 0) as profit 
+            "SELECT s.id, s.store_name, COALESCE(SUM(o.net_profit), 0) as profit, COALESCE(SUM(o.total_price), 0) as revenue 
              FROM {$wpdb->prefix}hbt_stores s
              LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
                 AND o.order_date BETWEEN %s AND %s 
@@ -957,7 +1003,7 @@ public function ajax_bulk_import_costs(): void {
         // Mağaza Karşılaştırması için son 30 günlük veri (İptal ve iadeler hariç)
         $thirty_days_ago = date( 'Y-m-d', strtotime( '-30 days' ) );
         $store_comparison = $wpdb->get_results( $wpdb->prepare(
-            "SELECT s.id, s.store_name, SUM(o.net_profit) as profit 
+            "SELECT s.id, s.store_name, SUM(o.net_profit) as profit, SUM(o.total_price) as revenue 
              FROM {$wpdb->prefix}hbt_stores s
              LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
                 AND o.order_date >= %s 
@@ -978,6 +1024,69 @@ public function ajax_bulk_import_costs(): void {
             $st['profit'] -= (float) $ad_cost;
         }
 
+        // --- YENİ: MAĞAZA TABLOSU YÜZDELİKLERİ İÇİN GEÇMİŞ VERİLER ---
+
+        // 1. Dün bu saate kadar (Bugünkü mağaza kârı trendi için)
+        $stores_yesterday_upto_now = $wpdb->get_results( $wpdb->prepare(
+            "SELECT s.id, COALESCE(SUM(o.net_profit), 0) as profit, COALESCE(SUM(o.total_price), 0) as revenue 
+             FROM {$wpdb->prefix}hbt_stores s
+             LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
+                AND o.order_date BETWEEN %s AND %s 
+                AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+             WHERE s.is_active = 1 GROUP BY s.id",
+            $yesterday . ' 00:00:00', $yesterday . ' ' . $current_time
+        ), ARRAY_A );
+        foreach ($stores_yesterday_upto_now as &$st) {
+            $ad_cost = $wpdb->get_var($wpdb->prepare("SELECT SUM(daily_amount) FROM {$wpdb->prefix}hbt_ad_expenses WHERE store_id = %d AND start_date <= %s AND end_date >= %s", $st['id'], $yesterday, $yesterday));
+            $st['profit'] -= (float) $ad_cost;
+        }
+
+        // 2. Önceki Gün (2 gün önce) (Dünkü mağaza kârı trendi için)
+        $dt_2days_ago = clone $dt_today;
+        $dt_2days_ago->modify('-2 days');
+        $twodays_ago = $dt_2days_ago->format('Y-m-d');
+        $stores_2days_ago = $wpdb->get_results( $wpdb->prepare(
+            "SELECT s.id, COALESCE(SUM(o.net_profit), 0) as profit, COALESCE(SUM(o.total_price), 0) as revenue 
+             FROM {$wpdb->prefix}hbt_stores s
+             LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
+                AND o.order_date BETWEEN %s AND %s 
+                AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+             WHERE s.is_active = 1 GROUP BY s.id",
+            $twodays_ago . ' 00:00:00', $twodays_ago . ' 23:59:59'
+        ), ARRAY_A );
+        foreach ($stores_2days_ago as &$st) {
+            $ad_cost = $wpdb->get_var($wpdb->prepare("SELECT SUM(daily_amount) FROM {$wpdb->prefix}hbt_ad_expenses WHERE store_id = %d AND start_date <= %s AND end_date >= %s", $st['id'], $twodays_ago, $twodays_ago));
+            $st['profit'] -= (float) $ad_cost;
+        }
+
+        // 3. Önceki 30 Gün bu saate kadar (Son 30 günlük mağaza kârı trendi için)
+        $dt_60days_ago = clone $dt_today;
+        $dt_60days_ago->modify('-60 days');
+        $sixty_days_ago = $dt_60days_ago->format('Y-m-d');
+        $dt_31days_ago = clone $dt_today;
+        $dt_31days_ago->modify('-31 days');
+        $thirtyone_days_ago = $dt_31days_ago->format('Y-m-d');
+        
+        $stores_prev_30days = $wpdb->get_results( $wpdb->prepare(
+            "SELECT s.id, COALESCE(SUM(o.net_profit), 0) as profit, COALESCE(SUM(o.total_price), 0) as revenue 
+             FROM {$wpdb->prefix}hbt_stores s
+             LEFT JOIN {$wpdb->prefix}hbt_orders o ON s.id = o.store_id 
+                AND o.order_date BETWEEN %s AND %s 
+                AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+             WHERE s.is_active = 1 GROUP BY s.id",
+            $sixty_days_ago . ' 00:00:00', $thirtyone_days_ago . ' ' . $current_time
+        ), ARRAY_A );
+        foreach ($stores_prev_30days as &$st) {
+            $ad_cost = $wpdb->get_var($wpdb->prepare(
+                "SELECT SUM(daily_amount * (DATEDIFF(LEAST(end_date, %s), GREATEST(start_date, %s)) + 1)) 
+                 FROM {$wpdb->prefix}hbt_ad_expenses 
+                 WHERE store_id = %d AND start_date <= %s AND end_date >= %s",
+                $thirtyone_days_ago, $sixty_days_ago, $st['id'], $thirtyone_days_ago, $sixty_days_ago
+            ));
+            $st['profit'] -= (float) $ad_cost;
+        }
+        // --- BİTİŞ ---
+
       $profit_goal = (float) get_option('hbt_monthly_profit_goal', 50000);
 
         wp_send_json_success( array(
@@ -992,9 +1101,17 @@ public function ajax_bulk_import_costs(): void {
             'revenue_last_week'  => $stats_last_week['revenue'],
             'profit_month'       => $stats_month['net_profit'],
             'revenue_month'      => $stats_month['revenue'],
-            'profit_last_month'  => $stats_last_month['net_profit'], // YENİ: Geçen Ay Kâr
+           'profit_last_month'  => $stats_last_month['net_profit'], // YENİ: Geçen Ay Kâr
             'revenue_last_month' => $stats_last_month['revenue'],    // YENİ: Geçen Ay Ciro
             
+            // "Bu Saate Kadar" Verileri (Balonlar İçin)
+            'profit_yesterday_upto_now'   => $stats_yesterday_upto_now['net_profit'],
+            'revenue_yesterday_upto_now'  => $stats_yesterday_upto_now['revenue'],
+            'profit_last_week_upto_now'   => $stats_last_week_upto_now['net_profit'],
+            'revenue_last_week_upto_now'  => $stats_last_week_upto_now['revenue'],
+            'profit_last_month_upto_now'  => $stats_last_month_upto_now['net_profit'],
+            'revenue_last_month_upto_now' => $stats_last_month_upto_now['revenue'],
+
             // Grafikler ve Listeler
             'trend'             => $db->get_revenue_trend( 30 ),
             'expense_breakdown' => $db->get_dashboard_expense_breakdown( 30 ),
@@ -1005,7 +1122,12 @@ public function ajax_bulk_import_costs(): void {
             // Mağaza Bazlı Veriler
             'stores_today'      => $stores_today ?: array(),
             'stores_yesterday'  => $stores_yesterday ?: array(),
-            'store_comparison'  => $store_comparison ?: array()
+            'store_comparison'  => $store_comparison ?: array(),
+            
+            // Mağaza Tablosu Yüzdelikleri İçin
+            'stores_yesterday_upto_now' => $stores_yesterday_upto_now ?: array(),
+            'stores_2days_ago'          => $stores_2days_ago ?: array(),
+            'stores_prev_30days'        => $stores_prev_30days ?: array()
         ) );
     }
 
@@ -1254,5 +1376,320 @@ public function ajax_bulk_import_costs(): void {
 		} else {
 			wp_send_json_error( array( 'message' => __( 'Ayarlar kaydedilemedi.', 'hbt-trendyol-profit-tracker' ) ) );
 		}
+	}
+	/**
+	 * AJAX: Dashboard verilerinde değişiklik olup olmadığını kontrol eder (Hafif Sorgu)
+	 */
+	public function ajax_check_dashboard_updates(): void {
+		$this->verify_ajax();
+		global $wpdb;
+		
+		// Sadece en son güncellenen siparişin zaman damgasına bakar. Sunucuyu ASLA yormaz.
+		$last_update = $wpdb->get_var("SELECT MAX(calculated_at) FROM {$wpdb->prefix}hbt_orders");
+		
+		wp_send_json_success( array( 
+			'last_update' => $last_update 
+		) );
+	}
+	/**
+	 * iOS Web App Meta etiketleri ve WP Admin Bar gizleme CSS'i
+	 */
+	public function ios_app_meta_and_css(): void {
+		?>
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+		<meta name="theme-color" content="#1e293b">
+		<meta name="mobile-web-app-capable" content="yes">
+		
+		<style>
+			/* Ortak Eklenti Menüsü Vurgusu (Masaüstü + Mobil) */
+			#toplevel_page_hbt-tpt-dashboard > a { background-color: #2563EB !important; color: #fff !important; }
+			#toplevel_page_hbt-tpt-dashboard > a .wp-menu-image:before { color: #fff !important; }
+
+			/* Mobilde Menü Açmak İçin Yüzen Buton (FAB) */
+			#hbt-mobile-fab {
+				display: none;
+				position: fixed;
+				bottom: 25px;
+				right: 25px;
+				width: 56px;
+				height: 56px;
+				background: #2563EB;
+				color: #fff;
+				border-radius: 50%;
+				text-align: center;
+				line-height: 56px;
+				font-size: 24px;
+				box-shadow: 0 4px 15px rgba(37,99,235,0.4);
+				z-index: 999999 !important;
+				cursor: pointer;
+				transition: transform 0.2s ease;
+			}
+			#hbt-mobile-fab:active { transform: scale(0.95); }
+			#hbt-mobile-fab .dashicons { line-height: 56px; font-size: 28px; width: 28px; height: 28px; }
+
+			/* ==========================================================
+			   SADECE MOBİL EKRANLAR (NATIVE APP DENEYİMİ) 
+			   ========================================================== */
+			@media screen and (max-width: 782px) {
+				/* WP Admin Top Bar'ı Mobilde Tamamen Gizle */
+				#wpadminbar { display: none !important; }
+				html.wp-toolbar, html.wp-toolbar body { padding-top: 0 !important; margin-top: 0 !important; }
+				#wpcontent { margin-top: 0 !important; padding-top: 15px !important; margin-left: 0 !important; }
+				
+				#hbt-mobile-fab { display: block; }
+				body { padding-bottom: 80px !important; -webkit-overflow-scrolling: touch; } 
+				
+				/* Menü Açıkken Arka Plan Kaymasını Engelle (Gerçek App Hissi) */
+				body.wp-responsive-open { overflow: hidden !important; }
+
+				/* Menü Açıkken Arkada Kalan Karartma (Overlay) - TAM EKRAN */
+				body.wp-responsive-open #adminmenuback {
+					display: block !important;
+					position: fixed !important;
+					top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+					width: 100vw !important; height: 100vh !important;
+					background: rgba(0,0,0,0.6) !important;
+					backdrop-filter: blur(2px);
+					z-index: 999997 !important;
+					margin: 0 !important; padding: 0 !important;
+				}
+
+				/* Menü Taşıyıcı Düzeltmesi (Window İçinde Window Hissini Tamamen Yok Eder) */
+				body.wp-responsive-open #adminmenuwrap {
+					display: block !important;
+					position: fixed !important;
+					top: 0 !important; left: 0 !important; bottom: 0 !important;
+					width: 85vw !important; 
+					max-width: 340px !important;
+					height: 100vh !important;
+					margin: 0 !important; 
+					padding: 0 !important;
+					z-index: 999998 !important;
+					background: #0f172a !important; 
+					overflow-y: auto !important;
+					overflow-x: hidden !important;
+					box-shadow: 2px 0 25px rgba(0,0,0,0.6) !important;
+					border: none !important;
+				}
+				
+				/* Menü Taşıyıcı Düzeltmesi (Window İçinde Window Hissini Tamamen Yok Eder) */
+				body.wp-responsive-open #adminmenuwrap {
+					display: block !important;
+					position: fixed !important;
+					top: 0 !important; left: 0 !important; bottom: 0 !important;
+					width: 85vw !important; 
+					max-width: 360px !important;
+					height: 100vh !important;
+					margin: 0 !important; 
+					padding: 0 !important;
+					z-index: 999998 !important;
+					background: #0f172a !important; 
+					overflow-y: auto !important;
+					overflow-x: hidden !important;
+					box-shadow: 2px 0 25px rgba(0,0,0,0.6) !important;
+					border: none !important;
+				}
+				
+				/* ==========================================================
+				   MODERN APP MENÜ TASARIMI (KAPSÜL VE TAM GENİŞLİK)
+				   ========================================================== */
+				body.wp-responsive-open #adminmenu { 
+					margin: 0 !important; 
+					padding: 60px 0 40px 0 !important; 
+					background: transparent !important;
+					border: none !important;
+					box-shadow: none !important;
+					display: flex !important;
+					flex-direction: column !important;
+					gap: 6px !important;
+					width: 100% !important; /* İŞTE O EKSİK KOD: Menüyü ekranın sonuna kadar genişletir */
+					align-items: stretch !important;
+				}
+				
+				body.wp-responsive-open #adminmenu::before {
+					content: "HBT Kâr Takip";
+					display: block;
+					color: #fff;
+					font-size: 24px;
+					font-weight: 800;
+					padding: 0 25px 30px 25px;
+					letter-spacing: -0.5px;
+					border-bottom: 1px solid rgba(255,255,255,0.05);
+					margin-bottom: 15px;
+				}
+
+				/* Menü Dış Kutuları (Sağdan Soldan 15px Boşlukla Tam Ekran) */
+				#adminmenu li.menu-top { 
+					border: none !important; 
+					margin: 0 !important; 
+					padding: 0 15px !important; 
+					width: 100% !important; 
+				}
+				
+				/* Menü Linkleri (Kapsüller) */
+				#adminmenu li.menu-top > a { 
+					font-size: 18px !important; 
+					padding: 18px 20px !important; 
+					border: none !important;
+					color: #cbd5e1 !important; 
+					margin: 0 !important;
+					display: flex !important; 
+					align-items: center !important;
+					border-radius: 14px !important; 
+					transition: all 0.2s ease !important;
+					width: 100% !important; /* Kapsülü tam genişletir */
+					box-sizing: border-box !important;
+				}
+				#adminmenu li.menu-top:hover > a, 
+				#adminmenu li.menu-top.wp-has-current-submenu > a {
+					background: #1e293b !important;
+					color: #fff !important;
+				}
+				
+				/* İkonlar - Yazıların üzerine binmemesi için kesin çözüm */
+				#adminmenu .wp-menu-image {
+					float: none !important;
+					width: 45px !important; /* İkon alanı biraz daha genişletildi */
+					height: 32px !important;
+					margin: 0 10px 0 0 !important; /* Yazı ile ikon arasına net boşluk */
+					display: flex !important;
+					align-items: center !important;
+					justify-content: center !important;
+					position: relative !important;
+				}
+				#adminmenu .wp-menu-image:before { 
+					font-size: 26px !important; 
+					color: #94a3b8 !important;
+					padding: 0 !important;
+					position: static !important; /* WP'nin default mutlak konumlandırmasını iptal eder */
+				}
+				
+				/* Menü Metinleri - Esnek ve Temiz Hizalama */
+				#adminmenu .wp-menu-name {
+					padding: 0 !important;
+					display: flex !important;
+					align-items: center !important;
+					width: auto !important; /* Daralmayı önler */
+					flex: 1 !important;
+					white-space: normal !important;
+					line-height: 1.3 !important;
+				}
+
+				/* Arkaplan Renkleri - WP Standart Koyu Temasıyla Uyumluluk */
+				body.wp-responsive-open #adminmenuwrap {
+					background: #1e1e1e !important; /* WP Orijinal Koyu Arkaplan */
+				}
+				
+				#adminmenu li.menu-top > a { 
+					background: transparent !important; /* Varsayılan mavi vurguyu kaldırdık */
+					color: #cbd5e1 !important;
+					border-radius: 10px !important;
+				}
+
+				/* Sadece üzerine gelindiğinde veya aktifken renk değişsin (WP Doğal Davranışı) */
+				#adminmenu li.menu-top:hover > a, 
+				#adminmenu li.menu-top.wp-has-current-submenu > a {
+					background: #2c3338 !important; /* WP Hover/Active rengi */
+					color: #3b82f6 !important; /* Yazı rengi maviye döner */
+				}
+
+				#toplevel_page_hbt-tpt-dashboard > a { 
+					background: transparent !important; /* Masaüstündeki mavi vurguyu mobil app çekmecesinde sadeleştirdik */
+				}
+
+				/* Alt Menü Linkleri */
+				#adminmenu .wp-submenu a {
+					padding: 12px 20px 12px 55px !important; /* İkonun alt hizasına göre boşluk */
+				}
+				
+				/* "Diğer Menüler" Başlığı Stili */
+				#hbt-other-menus-toggle { 
+					background: transparent !important; 
+					border-top: 1px solid rgba(255,255,255,0.05) !important; 
+					margin-top: 15px !important; 
+					padding-top: 15px !important; 
+				}
+				#hbt-other-menus-toggle a { color: #64748b !important; font-weight: 600; }
+
+				/* Gereksiz WP Kalıntılarını Gizle */
+				#collapse-menu { display: none !important; }
+				#adminmenu .auto-fold { border: none !important; }
+				#adminmenu * { box-sizing: border-box !important; }
+			}
+		</style>
+		<?php
+	}
+
+	/**
+	 * Admin Menüsünü manipüle eden ve FAB butonunu çalıştıran JS
+	 */
+	public function ios_app_menu_js(): void {
+		?>
+		<div id="hbt-mobile-fab">
+			<span class="dashicons dashicons-menu"></span>
+		</div>
+
+		<script>
+		jQuery(document).ready(function($) {
+			var $menu = $('#adminmenu');
+			var $ourMenu = $('#toplevel_page_hbt-tpt-dashboard'); 
+			var isMobile = window.innerWidth <= 782; // Sadece mobil ekran kontrolü
+			
+			if (!$ourMenu.length) return;
+			
+			// Eklentimizin menüsünü her zaman vurgulu ve açık tut (Masaüstü + Mobil Ortak)
+			$ourMenu.addClass('wp-has-current-submenu wp-menu-open');
+			$ourMenu.find('> a').addClass('wp-has-current-submenu wp-menu-open').removeClass('wp-not-current-submenu');
+			
+			// SADECE MOBİL İSE YAPILACAK İŞLEMLER
+			if (isMobile) {
+				// 1. Eklentimizin menüsünü en üste taşı
+				$menu.prepend($ourMenu);
+				
+				// 2. "Diğer Menüler" butonunu bizim menünün altına yerleştir
+				$ourMenu.after('<li class="menu-top menu-icon-generic" id="hbt-other-menus-toggle"><a href="#" class="menu-top"><div class="wp-menu-image dashicons-before dashicons-category"></div><div class="wp-menu-name">Diğer Menüler <span class="dashicons dashicons-arrow-down-alt2" style="float:right; margin-top:6px;"></span></div></a></li>');
+				
+				// 3. Bizim menü ve yeni buton HARİÇ tüm diğer WordPress menülerini seç
+				var $others = $menu.find('> li').not($ourMenu).not('#collapse-menu').not('#hbt-other-menus-toggle');
+				
+				// 4. Diğer menüleri butondan sonraya diz ve gizle
+				$others.insertAfter('#hbt-other-menus-toggle');
+				$others.hide();
+				
+				// Diğer menüleri şık bir şekilde aç/kapat
+				$('#hbt-other-menus-toggle').on('click', function(e) {
+					e.preventDefault();
+					$others.slideToggle('fast');
+					var $icon = $(this).find('.dashicons-arrow-down-alt2, .dashicons-arrow-up-alt2');
+					if ($icon.hasClass('dashicons-arrow-down-alt2')) {
+						$icon.removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
+					} else {
+						$icon.removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
+					}
+				});
+			}
+
+			// Mobilde Yüzen Butona (FAB) Tıklanınca Menüyü Aç/Kapat
+			$('#hbt-mobile-fab').on('click', function() {
+				$('body').toggleClass('wp-responsive-open');
+				var $icon = $(this).find('.dashicons');
+				if ($('body').hasClass('wp-responsive-open')) {
+					$icon.removeClass('dashicons-menu').addClass('dashicons-no-alt'); // Çarpı ikonu
+				} else {
+					$icon.removeClass('dashicons-no-alt').addClass('dashicons-menu'); // Menü ikonu
+				}
+			});
+
+			// Menü açıkken, arkaplandaki karartmaya tıklanırsa menüyü kapat
+			$('#adminmenuback').on('click', function() {
+				if ($('body').hasClass('wp-responsive-open')) {
+					$('#hbt-mobile-fab').click(); 
+				}
+			});
+		});
+		</script>
+		<?php
 	}
 }

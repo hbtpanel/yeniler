@@ -444,3 +444,42 @@ td.bg-blink-green { background-color: #059669 !important; color: #ffffff !import
 	.hbt-page-header, .hbt-tabs, .hbt-modal, .hbt-btn, #adminmenuwrap, #wpadminbar { display: none !important; }
 	.hbt-wrap { max-width: 100%; margin: 0; padding: 0; background: #fff;}
 }
+/* ==========================================================================
+   MOBİL APP DENEYİMİ (iOS / ANDROID) - RESPONSIVE İYİLEŞTİRMELER
+   ========================================================================== */
+@media screen and (max-width: 782px) {
+    /* Sayfa Kenar Boşluklarını App Formatına Getir */
+    .hbt-wrap { margin: 10px 10px 20px 10px !important; }
+    
+    /* Header (Başlık ve Butonlar) */
+    .hbt-page-header { flex-direction: column; align-items: flex-start; gap: 15px; margin-bottom: 20px; }
+    .hbt-header-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .hbt-header-actions .hbt-btn { width: 100%; justify-content: center; text-align: center; font-size: 15px; padding: 12px; }
+
+    /* Dashboard Kartları - Tek Sütun ve Daha Geniş */
+    .hbt-kpi-grid { grid-template-columns: 1fr !important; gap: 12px; }
+    .hbt-card[style*="grid-column: span 2;"] { grid-column: span 1 !important; }
+    .hbt-card { padding: 20px; border-radius: 12px; }
+    
+    /* Grafikler ve Alt Bölümler (Flex Düzeni) */
+    .hbt-dashboard-row { flex-direction: column; gap: 20px; }
+    .hbt-col-8, .hbt-col-6, .hbt-col-4 { width: 100% !important; flex: none !important; min-width: 100% !important; margin-bottom: 0; }
+    
+    /* Tablolar (Sağa Kaydırılabilir App Tabloları) */
+    .wp-list-table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+    .wp-list-table th, .wp-list-table td { padding: 12px 15px; }
+    
+    /* Modallar (Popup'lar) Tam Ekran Davranışı (Bottom Sheet gibi) */
+    .hbt-modal-content { 
+        width: 100% !important; 
+        max-width: 100% !important; 
+        margin: auto !important; 
+        border-radius: 15px 15px 0 0 !important;
+        position: absolute; 
+        bottom: 0; 
+        left: 0; 
+        max-height: 85vh; 
+        overflow-y: auto; 
+        padding-bottom: 40px;
+    }
+}

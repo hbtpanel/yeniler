@@ -1253,6 +1253,8 @@ class HBT_Database {
             $stats[ $key ] = $exists ? (int) $this->wpdb->get_var( "SELECT COUNT(*) FROM {$full_table}" ) : 0;
         }
 
+		
+
         return $stats;
     }
 
@@ -1343,10 +1345,11 @@ class HBT_Database {
             $final_profit = $daily_profit - $daily_ad;
             $margin = $daily_revenue > 0 ? ($final_profit / $daily_revenue) * 100 : 0;
 
-            $trend[] = array(
-                'day'    => $day_str,
-                'profit' => round( $final_profit, 2 ),
-                'margin' => round( $margin, 2 )
+           $trend[] = array(
+                'day'     => $day_str,
+                'profit'  => round( $final_profit, 2 ),
+                'margin'  => round( $margin, 2 ),
+                'revenue' => round( $daily_revenue, 2 )
             );
         }
         return $trend;
@@ -1369,7 +1372,8 @@ class HBT_Database {
                 COALESCE(SUM(total_price), 0) as total_sales,
                 COALESCE(SUM(total_cost_tl), 0) as total_cost,
                 COALESCE(SUM(total_commission), 0) as total_comm,
-                COALESCE(SUM(total_shipping), 0) as total_ship
+                COALESCE(SUM(total_shipping), 0) as total_ship,
+                COALESCE(SUM(total_other_exp), 0) as total_other_exp
              FROM {$wpdb->prefix}hbt_orders
              WHERE order_date >= %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
             $start_date

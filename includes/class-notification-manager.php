@@ -136,22 +136,57 @@ class HBT_Notification_Manager {
 			return;
 		}
 
-		$notifications = $this->db->get_unread( 5 );
+		// Eskisi gibi sadece 5 tane değil, okunmamış tüm bildirimleri (200'e kadar) çekelim ki gruplama doğru sayı versin
+		$notifications = $this->db->get_unread( 200 );
 		if ( empty( $notifications ) ) {
 			return;
 		}
 
-		foreach ( $notifications as $notification ) {
-			$class = $this->get_notice_class( $notification->notification_type );
-
-			// Use a container with class hbt-admin-notice and data-id for JS to read.
-			// Keep 'is-dismissible' so WP adds the default close button as well.
-			echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible hbt-admin-notice" data-id="' . esc_attr( (string) $notification->id ) . '">';
-			echo '<p><strong>' . esc_html( $notification->title ) . ':</strong> ' . esc_html( $notification->message ) . '</p>';
-			// Add an explicit small dismiss link so it's obvious and selectable by our JS.
-			echo '<p><a href="#" class="hbt-notice-close" aria-label="' . esc_attr__( 'Bildirimi kapat', 'hbt-trendyol-profit-tracker' ) . '">' . esc_html__( 'Kapat', 'hbt-trendyol-profit-tracker' ) . '</a></p>';
-			echo '</div>';
+		// Bildirimleri başlıklarına göre grupla ve say
+		$summary = array();
+		foreach ( $notifications as $notif ) {
+			$title = $notif->title;
+			if ( ! isset( $summary[ $title ] ) ) {
+				$summary[ $title ] = 0;
+			}
+			$summary[ $title ]++;
 		}
+
+		// Tekil, Derli Toplu Özet Bildirim Kutusu
+		echo '<div class="notice notice-warning is-dismissible" id="hbt-global-summary-notice" style="border-left-color: #f59e0b; padding-bottom: 15px; margin-top: 15px;">';
+		echo '<p style="font-size: 14px;"><strong><span class="dashicons dashicons-bell" style="color: #f59e0b; margin-right: 5px; vertical-align: text-top;"></span> Trendyol Kâr Takip - Okunmamış Bildirim Özeti</strong></p>';
+		
+		echo '<ul style="margin-left: 32px; list-style-type: square; margin-bottom: 15px; font-size: 13px;">';
+		foreach ( $summary as $title => $count ) {
+			echo '<li>' . esc_html( $title ) . ': <strong>' . intval( $count ) . ' adet</strong></li>';
+		}
+		echo '</ul>';
+		
+		echo '<div style="display: flex; gap: 10px;">';
+		echo '<a href="' . esc_url( admin_url( 'admin.php?page=hbt-tpt-notifications' ) ) . '" class="button button-primary">' . esc_html__( 'Detayları İncele', 'hbt-trendyol-profit-tracker' ) . '</a>';
+		echo '<button type="button" class="button" id="hbt-mark-all-read-inline-btn">' . esc_html__( 'Tümünü Okundu Say', 'hbt-trendyol-profit-tracker' ) . '</button>';
+		echo '</div>';
+
+		// AJAX ile "Tümünü Okundu Say" işlemini tetikleyen anlık script
+		echo "<script>
+		jQuery(document).ready(function($) {
+			$('#hbt-mark-all-read-inline-btn').on('click', function(e) {
+				e.preventDefault();
+				var btn = $(this);
+				btn.prop('disabled', true).text('İşleniyor...');
+				
+				$.post(hbtTpt.ajaxurl, { action: 'hbt_mark_all_notifications_read', nonce: hbtTpt.nonce }, function(res) {
+					if (res.success) {
+						$('#hbt-global-summary-notice').slideUp();
+						$('.hbt-blink-badge').remove(); // Menüdeki yanıp sönen bildirim balonunu da sil
+					} else {
+						btn.prop('disabled', false).text('Hata Oluştu');
+					}
+				});
+			});
+		});
+		</script>";
+		echo '</div>';
 	}
 
 	/**
