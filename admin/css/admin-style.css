@@ -1,0 +1,446 @@
+/**
+ * HBT Trendyol Profit Tracker – Admin Styles (Modern SaaS Design System)
+ *
+ * @package HBT_Trendyol_Profit_Tracker
+ */
+
+/* ============================================================
+   Google Fonts Import
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ============================================================
+   CSS Variables (Design System)
+   ============================================================ */
+:root {
+	/* Yeni Modern Renk Paleti */
+	--hbt-primary: #0F172A; /* Slate 900 - Tok Kurumsal Renk */
+	--hbt-secondary: #2563EB; /* Blue 600 - Vurgular ve Butonlar */
+	--hbt-bg-color: #F8FAFC; /* Slate 50 - Genel Arka Plan */
+	--hbt-card-bg: #FFFFFF; /* Beyaz */
+	--hbt-text-main: #334155; /* Slate 700 - Ana Metin */
+	--hbt-text-muted: #64748B; /* Slate 500 - Alt Metinler */
+	--hbt-border: #E2E8F0; /* Slate 200 - İnce Kenarlıklar */
+	
+	/* Durum Renkleri (Pastel ve Net) */
+	--hbt-success: #10B981; /* Emerald 500 */
+	--hbt-danger: #EF4444; /* Red 500 */
+	--hbt-warning: #F59E0B; /* Amber 500 */
+	--hbt-info: #3B82F6; /* Blue 500 */
+
+	/* UI Değişkenleri */
+	--hbt-radius: 12px;
+	--hbt-radius-sm: 8px;
+	--hbt-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+	--hbt-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+	--hbt-transition: all 0.3s ease;
+
+	/* Eski sayfalardaki yapıları bozmamak için Geriye Dönük Uyumluluk Haritası */
+	--hbt-green: var(--hbt-success);
+	--hbt-red: var(--hbt-danger);
+	--hbt-blue: var(--hbt-info);
+	--hbt-orange: var(--hbt-warning);
+	--hbt-yellow: #FBBF24;
+	--hbt-grey: var(--hbt-text-muted);
+	--hbt-dark: var(--hbt-primary);
+	--hbt-light: var(--hbt-bg-color);
+}
+
+/* ============================================================
+   Wrap & Typography Reset
+   ============================================================ */
+.hbt-tpt-wrap, .hbt-wrap {
+	max-width: 100%;
+	font-family: 'Inter', sans-serif;
+	color: var(--hbt-text-main);
+	margin-top: 20px;
+	margin-right: 20px;
+}
+
+/* WP Admin Link ve Focus Ezmeleri */
+.hbt-wrap a, .hbt-tpt-wrap a { text-decoration: none; transition: var(--hbt-transition); }
+.hbt-wrap a:focus { box-shadow: none; outline: none; }
+
+/* ============================================================
+   Modern Page Header & Buttons
+   ============================================================ */
+.hbt-page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+
+.hbt-page-title {
+	font-size: 24px !important;
+	font-weight: 700 !important;
+	color: var(--hbt-primary) !important;
+	margin: 0 !important;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 0;
+}
+
+.hbt-page-title .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+	color: var(--hbt-secondary);
+}
+
+.hbt-header-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.hbt-btn {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px !important;
+	border-radius: var(--hbt-radius-sm) !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	cursor: pointer;
+	transition: var(--hbt-transition) !important;
+	border: 1px solid transparent !important;
+	line-height: 1.5 !important;
+	height: auto !important;
+}
+
+.hbt-btn .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	line-height: 1.5;
+}
+
+.hbt-btn-primary {
+	background: var(--hbt-secondary) !important;
+	color: #ffffff !important;
+	box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+}
+
+.hbt-btn-primary:hover {
+	background: #1D4ED8 !important; /* Darker Blue */
+	color: #ffffff !important;
+	transform: translateY(-1px);
+}
+
+.hbt-btn-outline {
+	background: var(--hbt-card-bg) !important;
+	color: var(--hbt-text-main) !important;
+	border-color: var(--hbt-border) !important;
+}
+
+.hbt-btn-outline:hover {
+	background: var(--hbt-bg-color) !important;
+	border-color: #CBD5E1 !important;
+	color: var(--hbt-primary) !important;
+}
+
+/* ============================================================
+   Modern SaaS Cards
+   ============================================================ */
+.hbt-card {
+	background: var(--hbt-card-bg);
+	border-radius: var(--hbt-radius);
+	box-shadow: var(--hbt-shadow);
+	padding: 24px;
+	border: 1px solid var(--hbt-border);
+	transition: var(--hbt-transition);
+}
+
+.hbt-card:hover {
+	box-shadow: var(--hbt-shadow-hover);
+}
+
+.hbt-widget-title {
+	font-size: 16px !important;
+	font-weight: 600 !important;
+	margin: 0 0 20px 0 !important;
+	color: var(--hbt-primary) !important;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--hbt-border);
+}
+
+.hbt-widget-title .dashicons {
+	color: var(--hbt-text-muted);
+}
+
+/* KPI Grids (Compact Cards for Dashboard) */
+.hbt-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.hbt-card-compact {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+.hbt-card-compact .hbt-card-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--hbt-text-muted);
+	margin-bottom: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.hbt-card-compact .hbt-card-value {
+	font-size: 20px;
+	font-weight: 800;
+	color: var(--hbt-primary);
+	line-height: 1.2;
+}
+
+/* Specific Card Colors */
+.hbt-card-profit { border-bottom: 3px solid var(--hbt-success); }
+.hbt-card-profit .hbt-card-label { color: var(--hbt-success); }
+.hbt-card-revenue { border-bottom: 3px solid var(--hbt-secondary); }
+.hbt-card-revenue .hbt-card-value { color: var(--hbt-secondary); }
+
+/* Grid Layouts for Dashboard Rows */
+.hbt-dashboard-row {
+	display: flex;
+	gap: 24px;
+	margin-bottom: 24px;
+	flex-wrap: wrap;
+}
+
+.hbt-col-8 {
+	flex: 2;
+	min-width: 0;
+	background: var(--hbt-card-bg);
+	padding: 24px;
+	border-radius: var(--hbt-radius);
+	box-shadow: var(--hbt-shadow);
+	border: 1px solid var(--hbt-border);
+}
+
+.hbt-col-4 {
+	flex: 1;
+	min-width: 320px;
+	background: var(--hbt-card-bg);
+	padding: 24px;
+	border-radius: var(--hbt-radius);
+	box-shadow: var(--hbt-shadow);
+	border: 1px solid var(--hbt-border);
+}
+
+/* ============================================================
+   Goal Container (Hedef Kartı)
+   ============================================================ */
+.hbt-goal-container {
+	background: var(--hbt-card-bg);
+	padding: 24px;
+	border-radius: var(--hbt-radius);
+	box-shadow: var(--hbt-shadow);
+	margin-bottom: 24px;
+	border: 1px solid var(--hbt-border);
+	border-left: 5px solid var(--hbt-success);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	cursor: pointer;
+	transition: var(--hbt-transition);
+}
+
+.hbt-goal-container:hover {
+	box-shadow: var(--hbt-shadow-hover);
+	transform: translateY(-2px);
+}
+
+.hbt-goal-info { flex: 1; }
+.hbt-goal-info h3 { margin: 0 0 8px; font-size: 16px; color: var(--hbt-primary); font-weight: 700; display: flex; align-items: center; gap: 8px;}
+.hbt-goal-info p { margin: 0; font-size: 14px; color: var(--hbt-text-muted); font-weight: 500;}
+
+.hbt-goal-bar-wrap {
+	flex: 3;
+	background: var(--hbt-bg-color);
+	border-radius: 20px;
+	height: 28px;
+	position: relative;
+	overflow: hidden;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+	border: 1px solid var(--hbt-border);
+}
+
+.hbt-goal-bar-fill {
+	background: linear-gradient(90deg, var(--hbt-success), #34D399); /* Modern yeşil gradient */
+	height: 100%;
+	width: 0%;
+	transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+	border-radius: 20px;
+}
+
+.hbt-goal-text {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	text-align: center;
+	line-height: 28px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--hbt-primary);
+	text-shadow: 0px 0px 4px rgba(255,255,255,0.9);
+}
+
+/* ============================================================
+   Lists & Alerts (Top Products, Smart Alerts)
+   ============================================================ */
+.hbt-top-products-list { list-style: none; padding: 0; margin: 0; }
+.hbt-top-products-list li { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--hbt-border); align-items: center; transition: background 0.2s;}
+.hbt-top-products-list li:hover { background: #f8fafc; border-radius: 6px; padding: 14px 8px; margin: 0 -8px; }
+.hbt-top-products-list li:last-child { border-bottom: none; }
+.hbt-tp-name { font-weight: 600; font-size: 13px; color: var(--hbt-text-main); max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbt-tp-profit { font-weight: 700; color: var(--hbt-success); font-size: 14px; background: #D1FAE5; padding: 4px 10px; border-radius: 20px;}
+
+.hbt-alert-box { padding: 14px 16px; border-radius: var(--hbt-radius-sm); margin-bottom: 12px; display: flex; gap: 12px; align-items: center; font-size: 13px; font-weight: 500; }
+.hbt-alert-warning { background: #FEF3C7; border-left: 4px solid var(--hbt-warning); color: #92400E; }
+.hbt-alert-error { background: #FEE2E2; border-left: 4px solid var(--hbt-danger); color: #991B1B; }
+.hbt-alert-info { background: #DBEAFE; border-left: 4px solid var(--hbt-info); color: #1E40AF; }
+.hbt-alert-success { background: #D1FAE5; border-left: 4px solid var(--hbt-success); color: #065F46; }
+
+/* ============================================================
+   Table & DataTables Restyling
+   ============================================================ */
+.hbt-wrap table.wp-list-table {
+	border: 1px solid var(--hbt-border);
+	border-radius: var(--hbt-radius-sm);
+	overflow: hidden;
+	box-shadow: none;
+}
+.hbt-wrap table.wp-list-table thead th {
+	background: #F1F5F9;
+	color: var(--hbt-text-main);
+	font-weight: 600;
+	text-transform: uppercase;
+	font-size: 12px;
+	letter-spacing: 0.5px;
+	padding: 12px 10px;
+	border-bottom: 1px solid var(--hbt-border);
+}
+.hbt-wrap table.wp-list-table tbody td {
+	padding: 12px 10px;
+	color: var(--hbt-text-main);
+	font-size: 13px;
+	vertical-align: middle;
+}
+
+/* Tablo Satır Renkleri (Eski Sistem Uyumluluğu) */
+.profit-positive td { background-color: #F0FDF4 !important; }
+.profit-negative td { background-color: #FEF2F2 !important; color: #991B1B !important; }
+.profit-negative td a.btn-order-detail { color: #DC2626 !important; }
+.default-comm-row td { background-color: #FFFBEB !important; color: #92400E !important; }
+.default-comm-row td:first-child { border-left: 4px solid var(--hbt-warning) !important; }
+.cost-missing td { background-color: #FEF3C7 !important; }
+
+/* Kâr Marjı Yanıp Sönme Animasyonları */
+td.bg-blink-dark-red { background-color: #7F1D1D !important; color: #ffffff !important; animation: hbt-margin-blink 1.2s infinite; }
+td.bg-light-red { background-color: #FECACA !important; color: #991B1B !important; }
+td.bg-red { background-color: #EF4444 !important; color: #ffffff !important; }
+td.bg-green { background-color: #10B981 !important; color: #ffffff !important; }
+td.bg-blink-green { background-color: #059669 !important; color: #ffffff !important; font-weight: bold; animation: hbt-margin-blink 1.2s infinite; }
+
+@keyframes hbt-margin-blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+/* İptal Edilenler */
+.status-cancelled-row { opacity: 0.5; background-color: #F8FAFC !important; }
+.status-cancelled-row td { text-decoration: line-through; color: #94A3B8 !important; }
+.status-cancelled-row td a.btn-order-detail { text-decoration: none; color: var(--hbt-info) !important; }
+
+/* Zarar Rozeti */
+.hbt-badge-zarar {
+	display: inline-block;
+	background-color: var(--hbt-danger);
+	color: #ffffff !important;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 11px;
+	font-weight: 700;
+	margin-right: 6px;
+	box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   Modals & Toasts
+   ============================================================ */
+.hbt-modal { position: fixed; inset: 0; z-index: 100000; }
+.hbt-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); }
+.hbt-modal-box {
+	position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+	background: var(--hbt-card-bg); border-radius: var(--hbt-radius);
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+	min-width: 420px; max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column;
+}
+.hbt-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--hbt-border); }
+.hbt-modal-header h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--hbt-primary); }
+.hbt-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--hbt-text-muted); line-height: 1; padding: 0; transition: color 0.2s;}
+.hbt-modal-close:hover { color: var(--hbt-danger); }
+.hbt-modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+.hbt-toast {
+	position: fixed; bottom: 30px; right: 30px; z-index: 99999;
+	background: var(--hbt-primary); color: #fff;
+	padding: 14px 24px; border-radius: var(--hbt-radius-sm);
+	box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+	font-size: 14px; font-weight: 500;
+	animation: hbt-fadein 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hbt-toast.success { background: var(--hbt-success); }
+.hbt-toast.error   { background: var(--hbt-danger); }
+@keyframes hbt-fadein { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+/* ============================================================
+   Miscellaneous (Tabs, Toggles, Spinner, Responsive)
+   ============================================================ */
+.hbt-toggle { display: inline-flex; align-items: center; cursor: pointer; }
+.hbt-toggle input { display: none; }
+.hbt-toggle-slider { position: relative; width: 44px; height: 24px; background: #CBD5E1; border-radius: 24px; transition: background .3s; }
+.hbt-toggle-slider::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .3s, box-shadow .3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.hbt-toggle input:checked + .hbt-toggle-slider { background: var(--hbt-success); }
+.hbt-toggle input:checked + .hbt-toggle-slider::after { transform: translateX(20px); }
+
+.hbt-spinner {
+	display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3);
+	border-top-color: #fff; border-radius: 50%; animation: hbt-spin .6s linear infinite; vertical-align: middle; margin-left: 8px;
+}
+@keyframes hbt-spin { to { transform: rotate(360deg); } }
+
+.hbt-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--hbt-border); margin-bottom: 24px; }
+.hbt-tab { background: none; border: none; padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--hbt-text-muted); border-bottom: 2px solid transparent; transition: all 0.2s; }
+.hbt-tab:hover { color: var(--hbt-primary); }
+.hbt-tab.active { color: var(--hbt-secondary); border-bottom-color: var(--hbt-secondary); }
+
+/* Responsive Grid Adjustments */
+@media (max-width: 1400px) { .hbt-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .hbt-kpi-grid { grid-template-columns: repeat(2, 1fr); } .hbt-dashboard-row { flex-direction: column; } }
+@media (max-width: 600px) { .hbt-kpi-grid { grid-template-columns: 1fr; } }
+
+/* Print Mode */
+@media print {
+	.hbt-page-header, .hbt-tabs, .hbt-modal, .hbt-btn, #adminmenuwrap, #wpadminbar { display: none !important; }
+	.hbt-wrap { max-width: 100%; margin: 0; padding: 0; background: #fff;}
+}
