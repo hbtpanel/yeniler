@@ -101,6 +101,61 @@ foreach ( $stores as $st ) {
 }
 // ---------------------------------------------------------
 
+// --- EK: Seçilen tarih aralığına göre mağaza bazlı ciro ve net kâr hesaplaması ---
+// (Ekleme yeri: L30 hesaplamalarının hemen sonrasına)
+$period_start = $date_from . ' 00:00:00';
+$period_end   = $date_to . ' 23:59:59';
+
+// 1) Siparişlerden mağaza bazlı ham net profit ve revenue (seçili aralık)
+$period_stats_raw = $wpdb->get_results( $wpdb->prepare( "
+    SELECT store_id, SUM(net_profit) AS profit, SUM(total_price) AS revenue
+    FROM {$wpdb->prefix}hbt_orders
+    WHERE status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+      AND order_date BETWEEN %s AND %s
+    GROUP BY store_id
+", $period_start, $period_end ), OBJECT_K );
+
+// 2) Seçili aralık için reklam giderlerini mağaza bazında hesapla
+$period_ad_expenses = array();
+$period_start_ts = strtotime( $period_start );
+$period_end_ts   = strtotime( $period_end );
+
+foreach ( $all_ad_expenses as $ad ) {
+    if ( $store_id > 0 && $ad->store_id != $store_id ) {
+        continue;
+    }
+
+    $ad_s_ts = strtotime( $ad->start_date . ' 00:00:00' );
+    $ad_e_ts = strtotime( $ad->end_date . ' 00:00:00' );
+
+    $ov_s = max( $period_start_ts, $ad_s_ts );
+    $ov_e = min( $period_end_ts, $ad_e_ts );
+
+    if ( $ov_s <= $ov_e ) {
+        $days = round( ( $ov_e - $ov_s ) / 86400 ) + 1;
+        if ( ! isset( $period_ad_expenses[ $ad->store_id ] ) ) {
+            $period_ad_expenses[ $ad->store_id ] = 0.0;
+        }
+        $period_ad_expenses[ $ad->store_id ] += $days * (float) $ad->daily_amount;
+    }
+}
+
+// 3) Mağaza listesi ile birleştir: sonuçta her mağaza için 'revenue' ve 'profit' (reklam düştükten sonra)
+$store_period_stats = array();
+foreach ( $stores as $st ) {
+    $raw_profit = isset( $period_stats_raw[ $st->id ] ) ? (float) $period_stats_raw[ $st->id ]->profit : 0.0;
+    $revenue    = isset( $period_stats_raw[ $st->id ] ) ? (float) $period_stats_raw[ $st->id ]->revenue : 0.0;
+    $ad_exp     = isset( $period_ad_expenses[ $st->id ] ) ? (float) $period_ad_expenses[ $st->id ] : 0.0;
+
+    $store_period_stats[ $st->id ] = array(
+        'name'    => $st->store_name,
+        'revenue' => $revenue,
+        'profit'  => $raw_profit - $ad_exp, // reklam gideri düşüldü
+    );
+}
+// ---------------------------------------------------------
+
+
 $product_stats = $wpdb->get_results( $wpdb->prepare( "SELECT oi.barcode, oi.product_name, SUM(oi.net_profit) AS total_profit, SUM(oi.line_total) AS total_sales FROM {$wpdb->prefix}hbt_order_items oi INNER JOIN {$wpdb->prefix}hbt_orders o ON o.id = oi.order_id WHERE {$where_sql} GROUP BY oi.barcode ORDER BY total_profit DESC", ...$params ) );
 
 $best_product  = !empty($product_stats) ? $product_stats[0] : null;
@@ -310,6 +365,45 @@ $return_rate   = $total_all_orders > 0 ? ( $total_returns / $total_all_orders ) 
 					<div style="font-size: 11px; margin-top: 4px; color: var(--hbt-text-muted);">Son 30 Gün Net Kâr</div>
 				</div>
 			<?php endforeach; ?>
+			<?php
+
+			
+// --- EK: Seçili tarih aralığı için mağaza bazlı Ciro ve Net Kâr kartları (Operasyonel & Gider Özeti'nin devamına) ---
+if ( ! empty( $store_period_stats ) ) : ?>
+	<?php foreach ( $store_period_stats as $sid => $sdata ) : 
+		// Aynı CSS / görünümler ile devam etsin:
+		$profit_color = $sdata['profit'] >= 0 ? 'var(--hbt-success)' : 'var(--hbt-danger)';
+		$profit_bg    = $sdata['profit'] >= 0 ? '#F8FAFC' : 'var(--hbt-danger-bg)';
+	?>
+		<div class="hbt-card hbt-card-compact" style="border-bottom: 3px solid var(--hbt-primary);">
+			<span class="hbt-card-label" title="<?php echo esc_attr( $sdata['name'] ); ?>">
+				<span class="dashicons dashicons-chart-bar"></span>
+				<?php echo esc_html( $sdata['name'] ); ?> — <?php esc_html_e( 'Ciro (Seçili Aralık)', 'hbt-trendyol-profit-tracker' ); ?>
+			</span>
+			<span class="hbt-card-value" style="color: var(--hbt-primary); font-size: 20px;">
+				<?php echo esc_html( number_format( (float) $sdata['revenue'], 2 ) ); ?> ₺
+			</span>
+			<div style="font-size:11px; margin-top:6px; color:var(--hbt-text-muted);">
+				Toplam satış (seçili tarih aralığı)
+			</div>
+		</div>
+
+		<div class="hbt-card hbt-card-compact" style="border-left: 3px solid <?php echo $sdata['profit'] >= 0 ? 'var(--hbt-success)' : 'var(--hbt-danger)'; ?>; background: <?php echo esc_attr( $profit_bg ); ?>;">
+			<span class="hbt-card-label" title="<?php echo esc_attr( $sdata['name'] ); ?>">
+				<span class="dashicons dashicons-vault"></span>
+				<?php echo esc_html( $sdata['name'] ); ?> — <?php esc_html_e( 'Net Kâr (Seçili Aralık)', 'hbt-trendyol-profit-tracker' ); ?>
+			</span>
+			<span class="hbt-card-value" style="font-size:20px; color: <?php echo esc_attr( $profit_color ); ?>;">
+				<?php echo esc_html( number_format( (float) $sdata['profit'], 2 ) ); ?> ₺
+			</span>
+			<div style="font-size:11px; margin-top:6px; color:var(--hbt-text-muted);">
+				Reklam giderleri düşüldü
+			</div>
+		</div>
+	<?php endforeach; ?>
+<?php endif; 
+// --- /EK ---
+?>
 		</div>
 
 		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">
