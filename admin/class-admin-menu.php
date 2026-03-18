@@ -165,6 +165,10 @@ class HBT_Admin_Menu {
 		wp_enqueue_style( 'datatables-css', 'https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css', array(), '1.13.7' );
 		wp_enqueue_script( 'datatables-js', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', array( 'jquery' ), '1.13.7', true );
 
+		// YENİ: Select2 (Arama destekli çoklu ürün seçimi için)
+		wp_enqueue_style( 'select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0' );
+		wp_enqueue_script( 'select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array( 'jquery' ), '4.1.0', true );
+
 		wp_enqueue_script(
 			'hbt-tpt-admin',
 			HBT_TPT_PLUGIN_URL . 'admin/js/admin-script.js',

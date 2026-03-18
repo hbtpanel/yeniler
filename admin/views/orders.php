@@ -12,185 +12,289 @@ $db     = HBT_Database::instance();
 $stores = $db->get_stores();
 
 $filters = array(
-	'store_id'  => absint( $_GET['store_id'] ?? 0 ),
-	'status'    => sanitize_text_field( $_GET['status'] ?? '' ),
-	'date_from' => sanitize_text_field( $_GET['date_from'] ?? '' ),
-	'date_to'   => sanitize_text_field( $_GET['date_to'] ?? '' ),
+    'store_id'  => absint( $_GET['store_id'] ?? 0 ),
+    'status'    => sanitize_text_field( $_GET['status'] ?? '' ),
+    'date_from' => sanitize_text_field( $_GET['date_from'] ?? '' ),
+    'date_to'   => sanitize_text_field( $_GET['date_to'] ?? '' ),
 );
 ?>
 <div class="wrap hbt-tpt-wrap">
-	
-	<div class="hbt-page-header">
-		<h1 class="hbt-page-title">
-			<span class="dashicons dashicons-cart"></span> 
-			<?php esc_html_e( 'Siparişler ve Analiz', 'hbt-trendyol-profit-tracker' ); ?>
-		</h1>
-	</div>
+    
+    <div class="hbt-page-header">
+        <h1 class="hbt-page-title">
+            <span class="dashicons dashicons-cart"></span> 
+            <?php esc_html_e( 'Siparişler ve Analiz', 'hbt-trendyol-profit-tracker' ); ?>
+        </h1>
+    </div>
 
-	<div class="hbt-card" style="margin-bottom: 24px;">
-		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-			<h3 class="hbt-widget-title" style="margin: 0 !important; border-bottom: none; padding-bottom: 0;">
-				<span class="dashicons dashicons-filter"></span> Gelişmiş Filtreleme
-			</h3>
-			<div class="hbt-quick-dates" style="display: flex; gap: 6px; flex-wrap: wrap;">
-				<button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="today">Bugün</button>
-				<button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="yesterday">Dün</button>
-				<button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="this_week">Bu Hafta</button>
-				<button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="this_month">Bu Ay</button>
-				<button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="last_month">Geçen Ay</button>
-			</div>
-		</div>
+    <div class="hbt-card" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <h3 class="hbt-widget-title" style="margin: 0 !important; border-bottom: none; padding-bottom: 0;">
+                <span class="dashicons dashicons-filter"></span> Gelişmiş Filtreleme
+            </h3>
+            <div class="hbt-quick-dates" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="today">Bugün</button>
+                <button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="yesterday">Dün</button>
+                <button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="this_week">Bu Hafta</button>
+                <button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="this_month">Bu Ay</button>
+                <button type="button" class="hbt-btn hbt-btn-outline btn-order-date" data-type="last_month">Geçen Ay</button>
+            </div>
+        </div>
 
-		<form id="hbt-orders-filter-form" method="get" action="">
-			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-				
-				<div class="hbt-filter-group">
-					<label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Başlangıç Tarihi</label>
-					<input type="text" name="date_from" class="hbt-datepicker regular-text" value="<?php echo esc_attr( $filters['date_from'] ); ?>" placeholder="YYYY-MM-DD" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
-				</div>
+        <form id="hbt-orders-filter-form" method="get" action="">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                
+                <div class="hbt-filter-group">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Başlangıç Tarihi</label>
+                    <input type="text" name="date_from" class="hbt-datepicker regular-text" value="<?php echo esc_attr( $filters['date_from'] ); ?>" placeholder="YYYY-MM-DD" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
+                </div>
 
-				<div class="hbt-filter-group">
-					<label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Bitiş Tarihi</label>
-					<input type="text" name="date_to" class="hbt-datepicker regular-text" value="<?php echo esc_attr( $filters['date_to'] ); ?>" placeholder="YYYY-MM-DD" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
-				</div>
+                <div class="hbt-filter-group">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Bitiş Tarihi</label>
+                    <input type="text" name="date_to" class="hbt-datepicker regular-text" value="<?php echo esc_attr( $filters['date_to'] ); ?>" placeholder="YYYY-MM-DD" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
+                </div>
 
-				<div class="hbt-filter-group">
-					<label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Mağaza</label>
-					<select name="store_id" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
-						<option value="0">Tüm Mağazalar</option>
-						<?php foreach ( $stores as $store ) : ?>
-							<option value="<?php echo esc_attr( (string) $store->id ); ?>" <?php selected( $filters['store_id'], (int) $store->id ); ?>>
-								<?php echo esc_html( $store->store_name ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
+                <div class="hbt-filter-group">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Mağaza</label>
+                    <select name="store_id" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
+                        <option value="0">Tüm Mağazalar</option>
+                        <?php foreach ( $stores as $store ) : ?>
+                            <option value="<?php echo esc_attr( (string) $store->id ); ?>" <?php selected( $filters['store_id'], (int) $store->id ); ?>>
+                                <?php echo esc_html( $store->store_name ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-				<div class="hbt-filter-group">
-					<label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Kargo Durumu</label>
-					<select name="status" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
-						<option value="">Tümü</option>
-						<option value="Created" <?php selected( $filters['status'], 'Created' ); ?>>Oluşturuldu</option>
-						<option value="Picking" <?php selected( $filters['status'], 'Picking' ); ?>>Hazırlanıyor</option>
-						<option value="Shipped" <?php selected( $filters['status'], 'Shipped' ); ?>>Kargoda</option>
-						<option value="Delivered" <?php selected( $filters['status'], 'Delivered' ); ?>>Teslim Edildi</option>
-						<option value="Returned" <?php selected( $filters['status'], 'Returned' ); ?>>İade Edildi</option>
-						<option value="UnSupplied" <?php selected( $filters['status'], 'UnSupplied' ); ?>>Tedarik Edilemedi</option>
-						<option value="Cancelled" <?php selected( $filters['status'], 'Cancelled' ); ?>>İptal Edildi</option>
-					</select>
-				</div>
+                <div class="hbt-filter-group">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Kargo Durumu</label>
+                    <select name="status" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
+                        <option value="">Tümü</option>
+                        <option value="Created" <?php selected( $filters['status'], 'Created' ); ?>>Oluşturuldu</option>
+                        <option value="Picking" <?php selected( $filters['status'], 'Picking' ); ?>>Hazırlanıyor</option>
+                        <option value="Shipped" <?php selected( $filters['status'], 'Shipped' ); ?>>Kargoda</option>
+                        <option value="Delivered" <?php selected( $filters['status'], 'Delivered' ); ?>>Teslim Edildi</option>
+                        <option value="Returned" <?php selected( $filters['status'], 'Returned' ); ?>>İade Edildi</option>
+                        <option value="UnSupplied" <?php selected( $filters['status'], 'UnSupplied' ); ?>>Tedarik Edilemedi</option>
+                        <option value="Cancelled" <?php selected( $filters['status'], 'Cancelled' ); ?>>İptal Edildi</option>
+                    </select>
+                </div>
 
-				<div class="hbt-filter-group">
-					<label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Analiz (Renk) Durumu</label>
-					<select name="analysis_status" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
-						<option value="">Tüm Analizler</option>
-						<option value="green">🟩 Kâr Edenler (Açık Yeşil)</option>
-						<option value="red">🟥 Zarar Edenler (Açık Kırmızı)</option>
-						<option value="orange">🟧 %19 Komisyon Bekleyenler (Turuncu)</option>
-						<option value="yellow">🟨 Maliyeti Eksikler (Sarı/Krem)</option>
-						<option value="gray">⬜ İptal / İadeler (Üstü Çizili)</option>
-					</select>
-				</div>
+                <div class="hbt-filter-group">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 6px; display: block; font-size: 13px;">Analiz (Renk) Durumu</label>
+                    <select name="analysis_status" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);">
+                        <option value="">Tüm Analizler</option>
+                        <option value="green">🟩 Kâr Edenler (Açık Yeşil)</option>
+                        <option value="red">🟥 Zarar Edenler (Açık Kırmızı)</option>
+                        <option value="orange">🟧 %19 Komisyon Bekleyenler (Turuncu)</option>
+                        <option value="yellow">🟨 Maliyeti Eksikler (Sarı/Krem)</option>
+                        <option value="gray">⬜ İptal / İadeler (Üstü Çizili)</option>
+                    </select>
+                </div>
 
-			</div>
-			
-			<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--hbt-border); padding-top: 16px;">
-				<button type="button" id="hbt-orders-filter-btn" class="hbt-btn hbt-btn-primary"><span class="dashicons dashicons-search"></span> Filtreyi Uygula</button>
-				<button type="button" id="hbt-orders-clear-btn" class="hbt-btn hbt-btn-outline"><span class="dashicons dashicons-update-alt"></span> Filtreyi Temizle</button>
-				
-				<button type="button" id="hbt-export-excel-btn" class="hbt-btn hbt-btn-outline btn-export" style="margin-left: auto; color: #059669 !important; border-color: #A7F3D0 !important; background: #ECFDF5 !important;">
-					<span class="dashicons dashicons-media-spreadsheet"></span> Excel İndir
-				</button>
-			</div>
-		</form>
-	</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--hbt-border); padding-top: 16px;">
+                <button type="button" id="hbt-orders-filter-btn" class="hbt-btn hbt-btn-primary"><span class="dashicons dashicons-search"></span> Filtreyi Uygula</button>
+                <button type="button" id="hbt-orders-clear-btn" class="hbt-btn hbt-btn-outline"><span class="dashicons dashicons-update-alt"></span> Filtreyi Temizle</button>
+                
+                <button type="button" id="btn-open-product-filter" class="hbt-btn hbt-btn-outline" style="border-color: var(--hbt-primary); color: var(--hbt-primary);">
+                    <span class="dashicons dashicons-products"></span> Ürün Seçerek Filtrele
+                </button>
 
-	<div class="hbt-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
-		<table class="wp-list-table widefat fixed striped" id="hbt-orders-server-table" style="width:100%; border: none; margin: 0;">
-			<thead>
-				<tr>
-					<th>Sipariş No</th>
-					<th>Tarih</th>
-					<th>Müşteri</th>
-					<th>Toplam (TL)</th>
-					<th>Maliyet (TL)</th>
-					<th>Komisyon (TL)</th>
-					<th>Kargo (TL)</th>
-					<th>Sabit Gider (TL)</th> 
-					<th>Net Kâr (TL)</th>
-					<th>Marj (%)</th>
-					<th>Durum</th>
-				</tr>
-			</thead>
-			<tbody></tbody>
-			<tfoot>
-				<tr class="hbt-totals-row" style="background: #F8FAFC; border-top: 2px solid var(--hbt-border);">
-					<td style="font-weight: 700; color: var(--hbt-primary); padding-left: 24px;">Genel Toplam</td>
-					<td></td><td></td>
-					<td><strong id="foot-price" style="color: var(--hbt-primary);">0.00</strong></td>
-					<td><strong id="foot-cost" style="color: var(--hbt-primary);">0.00</strong></td>
-					<td><strong id="foot-comm" style="color: var(--hbt-primary);">0.00</strong></td>
-					<td><strong id="foot-ship" style="color: var(--hbt-primary);">0.00</strong></td>
-					<td><strong style="color: var(--hbt-primary);">-</strong></td> 
-					<td><strong id="foot-profit" style="font-size: 14px;">0.00</strong></td>
-					<td></td><td></td>
-				</tr>
-			</tfoot>
-		</table>
-	</div>
+                <button type="button" id="hbt-export-excel-btn" class="hbt-btn hbt-btn-outline btn-export" style="margin-left: auto; color: #059669 !important; border-color: #A7F3D0 !important; background: #ECFDF5 !important;">
+                    <span class="dashicons dashicons-media-spreadsheet"></span> Excel İndir
+                </button>
+            </div>
+        </form>
+    </div>
 
-	<div class="hbt-card" style="border-left: 4px solid var(--hbt-info); padding: 20px;">
-		<h4 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; color: var(--hbt-primary); display: flex; align-items: center; gap: 8px;">
-			<span class="dashicons dashicons-info" style="color: var(--hbt-info);"></span> Tablo Renk ve İşaret Açıklamaları
-		</h4>
-		<ul style="margin: 0; font-size: 13px; line-height: 2; list-style: none; padding-left: 0; color: var(--hbt-text-main);">
-			<li style="margin-bottom: 8px;">
-				<span style="display:inline-block; width:14px; height:14px; background-color:#F0FDF4; border:1px solid #4CAF50; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
-				<strong style="color: var(--hbt-primary);">Açık Yeşil Satır:</strong> Net kâr elde edilen (kârlı) siparişleri gösterir.
-			</li>
-			<li style="margin-bottom: 8px;">
-				<span style="display:inline-block; width:14px; height:14px; background-color:#FEF2F2; border:1px solid #dc3232; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
-				<span class="hbt-badge-zarar">ZARAR</span>
-				<strong style="color: var(--hbt-primary);">Açık Kırmızı Satır:</strong> Net kârı eksiye düşen (zarar edilen) siparişleri gösterir.
-			</li>
-			<li style="margin-bottom: 8px;">
-				<span style="display:inline-block; width:14px; height:14px; background-color:#FFFBEB; border:1px solid #F59E0B; border-left: 4px solid #F59E0B; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
-				<strong style="color: var(--hbt-primary);">Turuncu Şeritli Satır (%19 Komisyon):</strong> Trendyol API'den güncel komisyon henüz çekilemediği için sistem tarafından standart <strong>%19</strong> varsayılarak hesaplanmıştır. Finansal veriler Trendyol'a düştüğünde güncellenir.
-			</li>
-			<li style="margin-bottom: 8px;">
-				<span style="display:inline-block; width:14px; height:14px; background-color:#FEF3C7; border:1px solid #FBBF24; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
-				<strong style="color: var(--hbt-primary);">Açık Sarı / Krem Satır:</strong> Siparişteki ürünlerden en az birinin maliyeti sisteme girilmemiştir. Kâr doğru hesaplanamaz.
-			</li>
-			<li>
-				<span style="display:inline-block; width:14px; height:14px; background-color:#F8FAFC; border:1px solid #94A3B8; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
-				<span style="text-decoration: line-through; color: #64748B; font-weight:bold; margin-right: 4px;">Üstü Çizili:</span>
-				İptal edilen, iade dönen veya tedarik edilemeyen siparişleri ifade eder.
-			</li>
-		</ul>
-		<p style="margin: 16px 0 0 0; font-size: 12px; color: var(--hbt-text-muted); font-style: italic; border-top: 1px solid var(--hbt-border); padding-top: 12px;">
-			* Ayrıca <strong>Marj (%)</strong> sütunundaki koyu kırmızı yanıp sönmeler çok düşük/riskli kâr marjını, yeşil yanıp sönmeler ise yüksek kârlılığı belirtir.
-		</p>
-	</div>
+    <div class="hbt-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+        <table class="wp-list-table widefat fixed striped" id="hbt-orders-server-table" style="width:100%; border: none; margin: 0;">
+            <thead>
+                <tr>
+                    <th>Sipariş No</th>
+                    <th>Tarih</th>
+                    <th>Müşteri</th>
+                    <th>Toplam (TL)</th>
+                    <th>Maliyet (TL)</th>
+                    <th>Komisyon (TL)</th>
+                    <th>Kargo (TL)</th>
+                    <th>Sabit Gider (TL)</th> 
+                    <th>Net Kâr (TL)</th>
+                    <th>Marj (%)</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+                <tr class="hbt-totals-row" style="background: #F8FAFC; border-top: 2px solid var(--hbt-border);">
+                    <td style="font-weight: 700; color: var(--hbt-primary); padding-left: 24px;">Genel Toplam</td>
+                    <td></td><td></td>
+                    <td><strong id="foot-price" style="color: var(--hbt-primary);">0.00</strong></td>
+                    <td><strong id="foot-cost" style="color: var(--hbt-primary);">0.00</strong></td>
+                    <td><strong id="foot-comm" style="color: var(--hbt-primary);">0.00</strong></td>
+                    <td><strong id="foot-ship" style="color: var(--hbt-primary);">0.00</strong></td>
+                    <td><strong style="color: var(--hbt-primary);">-</strong></td> 
+                    <td><strong id="foot-profit" style="font-size: 14px;">0.00</strong></td>
+                    <td></td><td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 
-	<div id="order-detail-modal" class="hbt-modal" style="display:none;">
-		<div class="hbt-modal-overlay"></div>
-		<div class="hbt-modal-box" style="min-width: 600px;">
-			<div class="hbt-modal-header">
-				<h2><span class="dashicons dashicons-clipboard"></span> Sipariş Detayı</h2>
-				<button class="hbt-modal-close">&times;</button>
-			</div>
-			<div class="hbt-modal-body" id="order-detail-content">
-				<p style="text-align: center; color: var(--hbt-text-muted);"><span class="dashicons dashicons-update hbt-spinner"></span> Yükleniyor...</p>
-			</div>
-			<div style="padding: 16px 24px; border-top: 1px solid var(--hbt-border); display: flex; justify-content: flex-end; align-items: center; gap: 12px; background: #F8FAFC; border-radius: 0 0 var(--hbt-radius) var(--hbt-radius);">
-				<button type="button" id="btn-recalculate-order" class="hbt-btn hbt-btn-primary" data-id=""><span class="dashicons dashicons-update-alt"></span> Yeniden Hesapla</button>
-			</div>
-		</div>
-	</div>
+    <div class="hbt-card" style="border-left: 4px solid var(--hbt-info); padding: 20px;">
+        <h4 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; color: var(--hbt-primary); display: flex; align-items: center; gap: 8px;">
+            <span class="dashicons dashicons-info" style="color: var(--hbt-info);"></span> Tablo Renk ve İşaret Açıklamaları
+        </h4>
+        <ul style="margin: 0; font-size: 13px; line-height: 2; list-style: none; padding-left: 0; color: var(--hbt-text-main);">
+            <li style="margin-bottom: 8px;">
+                <span style="display:inline-block; width:14px; height:14px; background-color:#F0FDF4; border:1px solid #4CAF50; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
+                <strong style="color: var(--hbt-primary);">Açık Yeşil Satır:</strong> Net kâr elde edilen (kârlı) siparişleri gösterir.
+            </li>
+            <li style="margin-bottom: 8px;">
+                <span style="display:inline-block; width:14px; height:14px; background-color:#FEF2F2; border:1px solid #dc3232; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
+                <span class="hbt-badge-zarar">ZARAR</span>
+                <strong style="color: var(--hbt-primary);">Açık Kırmızı Satır:</strong> Net kârı eksiye düşen (zarar edilen) siparişleri gösterir.
+            </li>
+            <li style="margin-bottom: 8px;">
+                <span style="display:inline-block; width:14px; height:14px; background-color:#FFFBEB; border:1px solid #F59E0B; border-left: 4px solid #F59E0B; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
+                <strong style="color: var(--hbt-primary);">Turuncu Şeritli Satır (%19 Komisyon):</strong> Trendyol API'den güncel komisyon henüz çekilemediği için sistem tarafından standart <strong>%19</strong> varsayılarak hesaplanmıştır. Finansal veriler Trendyol'a düştüğünde güncellenir.
+            </li>
+            <li style="margin-bottom: 8px;">
+                <span style="display:inline-block; width:14px; height:14px; background-color:#FEF3C7; border:1px solid #FBBF24; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
+                <strong style="color: var(--hbt-primary);">Açık Sarı / Krem Satır:</strong> Siparişteki ürünlerden en az birinin maliyeti sisteme girilmemiştir. Kâr doğru hesaplanamaz.
+            </li>
+            <li>
+                <span style="display:inline-block; width:14px; height:14px; background-color:#F8FAFC; border:1px solid #94A3B8; vertical-align:middle; margin-right:8px; border-radius: 4px;"></span>
+                <span style="text-decoration: line-through; color: #64748B; font-weight:bold; margin-right: 4px;">Üstü Çizili:</span>
+                İptal edilen, iade dönen veya tedarik edilemeyen siparişleri ifade eder.
+            </li>
+        </ul>
+        <p style="margin: 16px 0 0 0; font-size: 12px; color: var(--hbt-text-muted); font-style: italic; border-top: 1px solid var(--hbt-border); padding-top: 12px;">
+            * Ayrıca <strong>Marj (%)</strong> sütunundaki koyu kırmızı yanıp sönmeler çok düşük/riskli kâr marjını, yeşil yanıp sönmeler ise yüksek kârlılığı belirtir.
+        </p>
+    </div>
+
+    <div id="order-detail-modal" class="hbt-modal" style="display:none;">
+        <div class="hbt-modal-overlay"></div>
+        <div class="hbt-modal-box" style="min-width: 600px;">
+            <div class="hbt-modal-header">
+                <h2><span class="dashicons dashicons-clipboard"></span> Sipariş Detayı</h2>
+                <button class="hbt-modal-close">&times;</button>
+            </div>
+            <div class="hbt-modal-body" id="order-detail-content">
+                <p style="text-align: center; color: var(--hbt-text-muted);"><span class="dashicons dashicons-update hbt-spinner"></span> Yükleniyor...</p>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid var(--hbt-border); display: flex; justify-content: flex-end; align-items: center; gap: 12px; background: #F8FAFC; border-radius: 0 0 var(--hbt-radius) var(--hbt-radius);">
+                <button type="button" id="btn-recalculate-order" class="hbt-btn hbt-btn-primary" data-id=""><span class="dashicons dashicons-update-alt"></span> Yeniden Hesapla</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="product-filter-modal" class="hbt-modal" style="display:none;">
+        <div class="hbt-modal-overlay"></div>
+        <div class="hbt-modal-box" style="min-width: 500px; max-width: 95%; overflow: visible;">
+            <div class="hbt-modal-header">
+                <h2><span class="dashicons dashicons-products"></span> Gelişmiş Ürün Filtresi</h2>
+                <button class="hbt-modal-close">&times;</button>
+            </div>
+            <div class="hbt-modal-body" style="overflow: visible; padding: 24px;">
+                <p style="font-size: 13px; color: var(--hbt-text-muted); margin-top: 0; margin-bottom: 20px;">
+                    Aşağıdan seçeceğiniz ürünlerin bulunduğu siparişleri kolayca filtreleyebilirsiniz.
+                </p>
+                
+                <div class="hbt-filter-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 8px; display: block; font-size: 13px;">Ürün(ler) İçinde Ara (Barkod / İsim)</label>
+                    <select name="filter_products[]" id="filter_products" multiple="multiple" style="width: 100%;">
+                        <?php
+                        $all_products = $db->get_product_costs();
+                        foreach ( $all_products as $prod ) {
+                            echo '<option value="' . esc_attr($prod->barcode) . '">' . esc_html($prod->product_name . ' (' . $prod->barcode . ')') . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="hbt-filter-group" style="margin-bottom: 10px;">
+                    <label style="font-weight: 600; color: var(--hbt-primary); margin-bottom: 8px; display: block; font-size: 13px;">Arama Mantığı</label>
+                    <select name="filter_product_logic" id="filter_product_logic" style="width: 100%; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border); height: 40px; background: #fff;">
+                        <option value="OR">Herhangi Biri (VEYA) - Seçtiğim herhangi bir ürün varsa</option>
+                        <option value="AND">Hepsi Birlikte (VE) - Seçtiğim ürünlerin tamamı varsa</option>
+                    </select>
+                </div>
+            </div>
+            <div style="padding: 16px 24px; border-top: 1px solid var(--hbt-border); display: flex; justify-content: flex-end; align-items: center; gap: 12px; background: #F8FAFC; border-radius: 0 0 var(--hbt-radius) var(--hbt-radius);">
+                <button type="button" class="hbt-btn hbt-btn-outline btn-cancel-product-modal">İptal</button>
+                <button type="button" id="btn-apply-product-filter" class="hbt-btn hbt-btn-primary"><span class="dashicons dashicons-yes"></span> Uygula ve Kapat</button>
+            </div>
+        </div>
+    </div>
 
 </div>
 
 <style>
+/* Modal İçi Select2 - Genişleyen Kutu ve Alt Satıra Geçme Ayarları */
+#product-filter-modal .select2-container .select2-selection--multiple {
+    min-height: 40px !important;
+    height: auto !important; /* Seçtikçe kutunun aşağı uzamasını sağlar */
+    border: 1px solid var(--hbt-border) !important;
+    border-radius: var(--hbt-radius-sm) !important;
+    padding: 6px !important;
+    background-color: #fff !important;
+}
+
+/* Seçilenleri ve inputu esnek kutuya çevir (taştığında alta atar) */
+#product-filter-modal .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: flex;
+    flex-wrap: wrap; /* Sığmayınca otomatik alt satıra atar */
+    gap: 6px; /* Etiketler arası mükemmel boşluk */
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Seçilen Ürün Etiketleri */
+#product-filter-modal .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    margin-top: 0 !important; /* Boşluğu artık gap ile veriyoruz */
+    height: 28px !important;
+    line-height: 28px !important;
+    background-color: var(--hbt-primary) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+}
+
+/* Yazı Yazılan (Input) Alanı Ayarları */
+#product-filter-modal .select2-container--default .select2-search--inline {
+    flex-grow: 1; /* Sağda kalan tüm boşluğu kapla */
+    margin-top: 0 !important;
+}
+#product-filter-modal .select2-search--inline .select2-search__field {
+    min-width: 250px !important; /* Yazı alanı hiçbir zaman daralmaz, yer kalmazsa direkt alt satıra temizce geçer */
+    margin-top: 0 !important;
+}
+
+#product-filter-modal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #fff !important;
+    margin-right: 6px !important;
+    padding-right: 6px !important;
+    border-right: 1px solid rgba(255,255,255,0.3) !important;
+}
+
+#product-filter-modal #filter_product_logic {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+
+/* Modal Z-Index Koruması (Select2 Dropdown'ının Modalın arkasında kalmaması için) */
+.select2-container--open {
+    z-index: 9999999 !important;
+}
+
 /* DataTables Arayüz Hizalama Düzeltmeleri */
 .dataTables_wrapper .dataTables_length {
     padding: 20px 0 10px 24px;
@@ -251,6 +355,30 @@ $filters = array(
 
 <script>
 jQuery(document).ready(function($) {
+    // YENİ: Select2 Kütüphanesini Başlat (Modal İçine Tam Uyumlu)
+    if ($.fn.select2 && $('#filter_products').length) {
+        $('#filter_products').select2({
+            placeholder: "Aramak istediğiniz ürün veya barkodu yazın...",
+            allowClear: true,
+            dropdownParent: $('#product-filter-modal'), /* Modal içinde arama çubuğunun düzgün çalışması için zorunludur */
+            language: {
+                noResults: function() { return "Ürün bulunamadı"; }
+            }
+        });
+    }
+
+    // Modal Açma Butonu İşlevi
+    $('#btn-open-product-filter').on('click', function(e) {
+        e.preventDefault();
+        $('#product-filter-modal').fadeIn(200);
+    });
+
+    // Modal İptal/Kapatma Butonları İşlevi
+    $('.btn-cancel-product-modal, #product-filter-modal .hbt-modal-close, #product-filter-modal .hbt-modal-overlay').on('click', function(e) {
+        e.preventDefault();
+        $('#product-filter-modal').fadeOut(200);
+    });
+
     if ($.fn.DataTable) {
         var ordersTable = $('#hbt-orders-server-table').DataTable({
             "destroy": true,
@@ -266,7 +394,10 @@ jQuery(document).ready(function($) {
                     d.status = $('select[name="status"]').val();
                     d.date_from = $('input[name="date_from"]').val();
                     d.date_to = $('input[name="date_to"]').val();
-					d.analysis_status = $('select[name="analysis_status"]').val(); // Renk Filtresi
+                    d.analysis_status = $('select[name="analysis_status"]').val();
+                    // Ürün Filtreleri Parametreleri
+                    d.filter_products = $('#filter_products').val();
+                    d.filter_product_logic = $('#filter_product_logic').val();
                 }
             },
             "order": [[ 1, "desc" ]],
@@ -318,92 +449,113 @@ jQuery(document).ready(function($) {
             e.preventDefault();
             ordersTable.ajax.reload();
         });
+
+        // Modaldan Filtreyi Uygulama İşlevi
+        $('#btn-apply-product-filter').on('click', function(e) {
+            e.preventDefault();
+            $('#product-filter-modal').fadeOut(200);
+            
+            // Kullanıcıya seçimin aktif olduğunu hissettirmek için dışarıdaki butonu boyayalım
+            if($('#filter_products').val() && $('#filter_products').val().length > 0) {
+                $('#btn-open-product-filter')
+                    .removeClass('hbt-btn-outline')
+                    .addClass('hbt-btn-primary')
+                    .html('<span class="dashicons dashicons-yes-alt"></span> Ürün Filtresi Devrede');
+            } else {
+                $('#btn-open-product-filter')
+                    .removeClass('hbt-btn-primary')
+                    .addClass('hbt-btn-outline')
+                    .html('<span class="dashicons dashicons-products"></span> Ürün Seçerek Filtrele');
+            }
+            
+            ordersTable.ajax.reload();
+        });
         
-		// Filtreyi Temizle İşlevi
+        // Ana Filtreyi Temizle İşlevi
         $('#hbt-orders-clear-btn').on('click', function(e) {
             e.preventDefault();
-            // Form alanlarını sıfırla
+            
+            // Mevcut form alanlarını sıfırla
             $('select[name="store_id"]').val('0');
             $('select[name="status"]').val('');
             $('select[name="analysis_status"]').val('');
             $('input[name="date_from"]').val('');
             $('input[name="date_to"]').val('');
             
-            // Eğer flatpickr (tarih seçici) kullanılıyorsa onu da temizle
             if($('input[name="date_from"]')[0]._flatpickr) $('input[name="date_from"]')[0]._flatpickr.clear();
             if($('input[name="date_to"]')[0]._flatpickr) $('input[name="date_to"]')[0]._flatpickr.clear();
 
-            // Yeni stildeki aktif butonların rengini sıfırla
-            $('.btn-order-date').removeClass('hbt-btn-primary').addClass('hbt-btn-outline');
+            // YENİ: Ürün filtrelerini (Modal içindekileri) de temizle ve butonu eski haline getir
+            if($('#filter_products').length) {
+                $('#filter_products').val(null).trigger('change');
+                $('#filter_product_logic').val('OR');
+                $('#btn-open-product-filter')
+                    .removeClass('hbt-btn-primary')
+                    .addClass('hbt-btn-outline')
+                    .html('<span class="dashicons dashicons-products"></span> Ürün Seçerek Filtrele');
+            }
 
-            // Tabloyu filtresiz haliyle yeniden yükle
+            $('.btn-order-date').removeClass('hbt-btn-primary').addClass('hbt-btn-outline');
             ordersTable.ajax.reload();
         });
 
-        // Excel İndirme İşlevi
         $('#hbt-export-excel-btn').on('click', function(e) {
             e.preventDefault();
-            // Mevcut filtre değerlerini al
             var store_id = $('select[name="store_id"]').val();
             var status = $('select[name="status"]').val();
             var date_from = $('input[name="date_from"]').val();
             var date_to = $('input[name="date_to"]').val();
             var analysis_status = $('select[name="analysis_status"]').val();
             
-            // Arka plandaki (PHP) indirme linkine yönlendir
             var exportUrl = hbtTpt.ajaxurl + '?action=hbt_export_orders&store_id=' + store_id + '&status=' + status + '&date_from=' + date_from + '&date_to=' + date_to + '&analysis_status=' + analysis_status;
             window.location.href = exportUrl;
         });
 
-		// Hızlı Tarih Seçim Butonları İşlevi
-		$('.btn-order-date').on('click', function(e) {
-			e.preventDefault();
-			
-            // Eski 'button-primary' yerine yeni tasarım sınıflarını (toggle) uygula
-			$('.btn-order-date').removeClass('hbt-btn-primary').addClass('hbt-btn-outline');
-			$(this).removeClass('hbt-btn-outline').addClass('hbt-btn-primary');
-			
-			var type = $(this).data('type');
-			var today = new Date();
-			var start = '', end = '';
-			
-			function formatDate(d) {
-				var month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
-				if (month.length < 2) month = '0' + month;
-				if (day.length < 2) day = '0' + day;
-				return year + '-' + month + '-' + day;
-			}
+        $('.btn-order-date').on('click', function(e) {
+            e.preventDefault();
+            $('.btn-order-date').removeClass('hbt-btn-primary').addClass('hbt-btn-outline');
+            $(this).removeClass('hbt-btn-outline').addClass('hbt-btn-primary');
+            
+            var type = $(this).data('type');
+            var today = new Date();
+            var start = '', end = '';
+            
+            function formatDate(d) {
+                var month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+                if (month.length < 2) month = '0' + month;
+                if (day.length < 2) day = '0' + day;
+                return year + '-' + month + '-' + day;
+            }
 
-			if (type === 'today') {
-				start = end = formatDate(today);
-			} else if (type === 'yesterday') {
-				var yest = new Date(today); yest.setDate(yest.getDate() - 1);
-				start = end = formatDate(yest);
-			} else if (type === 'this_week') {
-				var first = today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1); 
-				var mon = new Date(today.setDate(first));
-				start = formatDate(mon);
-				end = formatDate(new Date()); 
-			} else if (type === 'this_month') {
-				var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-				start = formatDate(firstDay);
-				end = formatDate(new Date());
-			} else if (type === 'last_month') {
-				var firstDayLM = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-				var lastDayLM = new Date(today.getFullYear(), today.getMonth(), 0);
-				start = formatDate(firstDayLM);
-				end = formatDate(lastDayLM);
-			}
-			
-			// Tarih inputlarını güncelle (Flatpickr kullanıyorsan tetikle)
-			$('input[name="date_from"]').val(start);
-			if($('input[name="date_from"]')[0]._flatpickr) $('input[name="date_from"]')[0]._flatpickr.setDate(start);
+            if (type === 'today') {
+                start = end = formatDate(today);
+            } else if (type === 'yesterday') {
+                var yest = new Date(today); yest.setDate(yest.getDate() - 1);
+                start = end = formatDate(yest);
+            } else if (type === 'this_week') {
+                var first = today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1); 
+                var mon = new Date(today.setDate(first));
+                start = formatDate(mon);
+                end = formatDate(new Date()); 
+            } else if (type === 'this_month') {
+                var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                start = formatDate(firstDay);
+                end = formatDate(new Date());
+            } else if (type === 'last_month') {
+                var firstDayLM = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                var lastDayLM = new Date(today.getFullYear(), today.getMonth(), 0);
+                start = formatDate(firstDayLM);
+                end = formatDate(lastDayLM);
+            }
+            
+            $('input[name="date_from"]').val(start);
+            if($('input[name="date_from"]')[0]._flatpickr) $('input[name="date_from"]')[0]._flatpickr.setDate(start);
 
-			$('input[name="date_to"]').val(end);
-			if($('input[name="date_to"]')[0]._flatpickr) $('input[name="date_to"]')[0]._flatpickr.setDate(end);
+            $('input[name="date_to"]').val(end);
+            if($('input[name="date_to"]')[0]._flatpickr) $('input[name="date_to"]')[0]._flatpickr.setDate(end);
 
-			ordersTable.ajax.reload(); // Tabloyu otomatik yenile
-		});
+            ordersTable.ajax.reload();
+        });
     }
 });
 </script>

@@ -1602,6 +1602,25 @@ class HBT_Database {
 			$params[] = $like_val;
 		}
 
+		// YENİ EKLENEN: Ürün Bazlı Gelişmiş Filtreleme (VE / VEYA Mantığı)
+		if ( ! empty( $request['filter_products'] ) && is_array( $request['filter_products'] ) ) {
+			$product_logic = isset( $request['filter_product_logic'] ) && $request['filter_product_logic'] === 'AND' ? 'AND' : 'OR';
+			$barcodes = array_map( 'sanitize_text_field', $request['filter_products'] );
+			$placeholders = implode( ',', array_fill( 0, count( $barcodes ), '%s' ) );
+
+			if ( $product_logic === 'OR' ) {
+				// Herhangi biri (VEYA): Siparişte seçilen ürünlerden en az biri varsa
+				$where[] = "id IN (SELECT order_id FROM {$this->wpdb->prefix}hbt_order_items WHERE barcode IN ($placeholders))";
+				$params = array_merge( $params, $barcodes );
+			} else {
+				// Hepsi Birlikte (VE): Siparişte seçilen BÜTÜN ürünler varsa (Kesişim)
+				$count = count( $barcodes );
+				$where[] = "id IN (SELECT order_id FROM {$this->wpdb->prefix}hbt_order_items WHERE barcode IN ($placeholders) GROUP BY order_id HAVING COUNT(DISTINCT barcode) >= %d)";
+				$params = array_merge( $params, $barcodes );
+				$params[] = $count;
+			}
+		}
+
 		$where_sql = implode( ' AND ', $where );
 
 		// Kayıt Sayıları
