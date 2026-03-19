@@ -44,6 +44,7 @@ class HBT_Cron_Manager {
 		'hbt_sync_products'          => 'daily',
 		'hbt_cleanup_notifications'  => 'weekly',
 		'hbt_process_background_queue' => 'hbt_every_min',
+		'hbt_send_daily_report'      => 'hourly', // Her saat kontrol edeceğiz, vakti gelince atacağız
 	);
 
 	/**
@@ -81,6 +82,7 @@ class HBT_Cron_Manager {
 		add_action( 'hbt_check_returns', array( $this, 'check_returns' ) );
 		add_action( 'hbt_sync_products', array( $this, 'sync_products' ) );
 		add_action( 'hbt_cleanup_notifications', array( $this, 'cleanup_notifications' ) );
+		add_action( 'hbt_send_daily_report', array( $this, 'send_daily_email_report' ) );
 
 		// Background queue worker hook (light, bounded work)
 		add_action( 'hbt_process_background_queue', array( $this, 'process_background_queue' ) );
@@ -1032,6 +1034,129 @@ class HBT_Cron_Manager {
 	 */
 	public function cleanup_notifications(): void {
 		$this->db->cleanup_old_notifications();
+	}
+
+	/**
+	 * Günlük E-posta Raporunu Gönderir
+	 */
+	public function send_daily_email_report( $is_test = false ): void {
+		if ( ! class_exists( 'HBT_Settings' ) ) {
+			require_once HBT_TPT_PLUGIN_DIR . 'includes/class-settings.php';
+		}
+		
+		$settings = new HBT_Settings();
+		$is_active = (bool) $settings->get('daily_report_active', false);
+		$email     = sanitize_email( $settings->get('daily_report_email', '') );
+		$time_str  = sanitize_text_field( $settings->get('daily_report_time', '09:00') );
+
+		if ( ! $is_active || empty( $email ) ) {
+			return; // Kapalıysa veya e-posta yoksa çık
+		}
+
+		// Sunucu saati ile ayarlanmış saati karşılaştır
+		$tz = new DateTimeZone('Europe/Istanbul');
+		$now = new DateTime('now', $tz);
+		$current_hour_min = $now->format('H:i');
+		$today_date = $now->format('Y-m-d');
+		
+		// Sadece saati (H) baz alarak daha güvenli bir tetikleme yapalım
+		$target_hour = substr($time_str, 0, 2);
+		$current_hour = substr($current_hour_min, 0, 2);
+
+		if ( ! $is_test ) {
+			if ( $current_hour !== $target_hour ) {
+				return; // Saati gelmemiş
+			}
+
+			// Bugün bu rapor zaten atıldı mı kontrol et (Aynı saat içinde 2 kez atmasın)
+			$last_sent = get_option( 'hbt_daily_report_last_sent', '' );
+			if ( $last_sent === $today_date ) {
+				return; 
+			}
+		}
+
+		// Dünün tarihlerini ayarla
+		$yesterday_dt = clone $now;
+		$yesterday_dt->modify('-1 day');
+		$yesterday = $yesterday_dt->format('Y-m-d');
+
+		// Veritabanından dünün özet verilerini çek
+		$db = HBT_Database::instance();
+		$stats = $db->get_profit_stats( $yesterday, $yesterday );
+		
+		// Dünkü İade Sayısını Çek
+		global $wpdb;
+		$return_count = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}hbt_returns WHERE DATE(return_date) = %s",
+			$yesterday
+		) );
+
+		$revenue = number_format( (float) $stats['revenue'], 2, ',', '.' ) . ' ₺';
+		$profit  = number_format( (float) $stats['net_profit'], 2, ',', '.' ) . ' ₺';
+		$profit_color = (float) $stats['net_profit'] >= 0 ? '#10B981' : '#EF4444';
+
+		// E-Posta Şablonunu Hazırla (HTML)
+		$subject = sprintf( 'Günlük Kâr Özetiniz (%s) - HBT Trendyol Profit Tracker', $yesterday_dt->format('d.m.Y') );
+		
+		$message = '
+		<html>
+		<head>
+			<style>
+				body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; }
+				.container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+				.header { background-color: #0F172A; color: #ffffff; padding: 20px; text-align: center; }
+				.header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+				.content { padding: 30px 20px; }
+				.stat-box { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+				.stat-label { font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+				.stat-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+				.footer { background: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h2>Trendyol Günlük Finansal Özet</h2>
+					<p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 14px;">Tarih: ' . $yesterday_dt->format('d.m.Y') . '</p>
+				</div>
+				<div class="content">
+					<p style="color: #334155; margin-bottom: 25px; text-align: center; font-size: 16px;">Merhaba, dünün finansal özeti aşağıdadır:</p>
+					
+					<div class="stat-box">
+						<div class="stat-label">Dünkü Ciro</div>
+						<div class="stat-value">' . $revenue . '</div>
+					</div>
+					
+					<div class="stat-box" style="border-bottom: 3px solid ' . $profit_color . ';">
+						<div class="stat-label">Net Kâr</div>
+						<div class="stat-value" style="color: ' . $profit_color . ';">' . $profit . '</div>
+					</div>
+
+					<div class="stat-box">
+						<div class="stat-label">Dün Gelen İade Sayısı</div>
+						<div class="stat-value" style="font-size: 20px;">' . $return_count . ' Adet</div>
+					</div>
+
+					<div style="text-align: center; margin-top: 30px;">
+						<a href="' . admin_url('admin.php?page=hbt-tpt-dashboard') . '" style="background: #2563EB; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; display: inline-block;">Panele Git & Detayları Gör</a>
+					</div>
+				</div>
+				<div class="footer">
+					Bu e-posta HBT Trendyol Profit Tracker eklentisi tarafından otomatik olarak gönderilmiştir.
+				</div>
+			</div>
+		</body>
+		</html>
+		';
+
+		$headers = array('Content-Type: text/html; charset=UTF-8');
+
+		$mail_sent = wp_mail( $email, $subject, $message, $headers );
+
+		if ( $mail_sent && ! $is_test ) {
+			// Bugünü kaydet ki tekrar atmasın
+			update_option( 'hbt_daily_report_last_sent', $today_date );
+		}
 	}
 }
 // Arka plan (Plesk/Cron) isteklerinde de işçinin (worker) uyanık kalmasını sağlar.

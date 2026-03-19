@@ -40,6 +40,9 @@ class HBT_Settings {
 		'pdf_orientation'             => 'landscape',
 		'cron_financial_interval'     => 360,
 		'cron_product_interval'       => 1440,
+		'daily_report_active'         => false,
+		'daily_report_email'          => '',
+		'daily_report_time'           => '09:00',
 	);
 
 	/**
@@ -98,6 +101,11 @@ class HBT_Settings {
 		register_setting( 'hbt_tpt_notifications', self::PREFIX . 'notification_cost_missing', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
 		register_setting( 'hbt_tpt_notifications', self::PREFIX . 'critical_loss_threshold', array( 'sanitize_callback' => 'floatval' ) );
 
+		// Daily Report.
+		register_setting( 'hbt_tpt_notifications', self::PREFIX . 'daily_report_active', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
+		register_setting( 'hbt_tpt_notifications', self::PREFIX . 'daily_report_email', array( 'sanitize_callback' => 'sanitize_email' ) );
+		register_setting( 'hbt_tpt_notifications', self::PREFIX . 'daily_report_time', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+
 		// Export.
 		register_setting(
 			'hbt_tpt_export',
@@ -138,6 +146,9 @@ class HBT_Settings {
 			'notification_cost_missing' => 'rest_sanitize_boolean',
 			'export_default_format'     => 'sanitize_text_field',
 			'pdf_orientation'           => 'sanitize_text_field',
+			'daily_report_active'       => 'rest_sanitize_boolean',
+			'daily_report_email'        => 'sanitize_email',
+			'daily_report_time'         => 'sanitize_text_field',
 		);
 
 		foreach ( $sanitizers as $key => $callback ) {

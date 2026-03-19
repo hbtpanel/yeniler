@@ -1,3 +1,14 @@
+/* ==========================================================================
+   GLOBAL KUTU MODELİ DÜZELTMESİ (YATAY KAYMAYI ÖNLER)
+   ========================================================================== */
+.hbt-wrap, .hbt-wrap * {
+    box-sizing: border-box !important;
+}
+
+.hbt-wrap {
+    max-width: 100%;
+    overflow-x: hidden; /* Sayfa dışına taşan görünmez alanları yok et */
+}
 /**
  * HBT Trendyol Profit Tracker – Admin Styles (Modern SaaS Design System)
  *
@@ -447,39 +458,81 @@ td.bg-blink-green { background-color: #059669 !important; color: #ffffff !import
 /* ==========================================================================
    MOBİL APP DENEYİMİ (iOS / ANDROID) - RESPONSIVE İYİLEŞTİRMELER
    ========================================================================== */
+   /* Dashboard Ürün Grid Yapısı (Yeni) */
+.hbt-products-grid { display: flex; flex-direction: column; gap: 12px; }
+.hbt-tp-item { 
+    background: var(--hbt-bg-color); 
+    padding: 12px 16px; 
+    border-radius: 8px; 
+    border: 1px solid var(--hbt-border); 
+    display: flex; 
+    align-items: center; 
+    gap: 12px;
+    justify-content: space-between;
+}
+.hbt-tp-name { flex: 1; font-weight: 600; font-size: 13px; color: var(--hbt-text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbt-tp-meta { font-size: 11px; color: var(--hbt-text-muted); font-weight: 400; }
+.hbt-tp-profit { padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.hbt-tp-profit-success { color: #ffffff; background: var(--hbt-success); box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3); }
+.hbt-tp-profit-danger { color: #ffffff; background: var(--hbt-danger); box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); }
+.hbt-no-data { text-align: center; color: var(--hbt-text-muted); font-size: 13px; font-weight: 600; padding: 16px; }
+
 @media screen and (max-width: 782px) {
     /* Sayfa Kenar Boşluklarını App Formatına Getir */
     .hbt-wrap { margin: 10px 10px 20px 10px !important; }
     
-    /* Header (Başlık ve Butonlar) */
-    .hbt-page-header { flex-direction: column; align-items: flex-start; gap: 15px; margin-bottom: 20px; }
-    .hbt-header-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-    .hbt-header-actions .hbt-btn { width: 100%; justify-content: center; text-align: center; font-size: 15px; padding: 12px; }
+    /* Header (Başlık ve Butonlar) - Butonlar yan yana 2 sütun */
+    .hbt-page-header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.hbt-header-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .hbt-header-actions .hbt-btn { width: 100%; justify-content: center; text-align: center; font-size: 13px !important; padding: 10px 8px !important; }
 
-    /* Dashboard Kartları - Tek Sütun ve Daha Geniş */
+    /* Hedef Kartı (Goal Container) - Dikey düzene geçiş */
+    .hbt-goal-container { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; border-left-width: 4px; }
+    .hbt-goal-info h3 { font-size: 15px; }
+    .hbt-goal-bar-wrap { height: 24px; }
+    .hbt-goal-text { line-height: 24px; font-size: 12px; }
+
+    /* Dashboard Kartları - Optimize Edilmiş Padding ve Tipografi */
     .hbt-kpi-grid { grid-template-columns: 1fr !important; gap: 12px; }
     .hbt-card[style*="grid-column: span 2;"] { grid-column: span 1 !important; }
-    .hbt-card { padding: 20px; border-radius: 12px; }
+    .hbt-card { padding: 16px; border-radius: 12px; }
     
-    /* Grafikler ve Alt Bölümler (Flex Düzeni) */
-    .hbt-dashboard-row { flex-direction: column; gap: 20px; }
-    .hbt-col-8, .hbt-col-6, .hbt-col-4 { width: 100% !important; flex: none !important; min-width: 100% !important; margin-bottom: 0; }
+    /* KPI Kart İçi Yazı Düzenlemeleri */
+    .hbt-card-compact .hbt-card-value { font-size: 22px !important; }
+    .hbt-card-compact .hbt-card-label { font-size: 12px; margin-bottom: 6px; }
     
-    /* Tablolar (Sağa Kaydırılabilir App Tabloları) */
-    .wp-list-table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; border-radius: 8px; }
-    .wp-list-table th, .wp-list-table td { padding: 12px 15px; }
+    /* Grafikler ve Alt Bölümler */
+    .hbt-dashboard-row { flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .hbt-col-8, .hbt-col-6, .hbt-col-4 { width: 100% !important; flex: none !important; min-width: 100% !important; margin-bottom: 0; padding: 16px; }
     
-    /* Modallar (Popup'lar) Tam Ekran Davranışı (Bottom Sheet gibi) */
-    .hbt-modal-content { 
+    /* Grafik Yüksekliklerini Mobilde Daraltma (320px -> 250px) */
+    .hbt-col-8 div[style*="height: 320px"], 
+    .hbt-col-4 div[style*="height: 320px"] { height: 250px !important; }
+
+    /* Tablolar (Gelişmiş Yatay Kaydırma Deneyimi) */
+    .wp-list-table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; border-radius: 8px; border-right: 1px solid var(--hbt-border); }
+    .wp-list-table th, .wp-list-table td { padding: 10px 12px; font-size: 12px; }
+    
+    /* Tablo için modern iOS tarzı scrollbar */
+    .wp-list-table::-webkit-scrollbar { height: 6px; }
+    .wp-list-table::-webkit-scrollbar-track { background: var(--hbt-bg-color); border-radius: 8px; }
+    .wp-list-table::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
+    
+    /* Akıllı Uyarılar Listesi */
+    .hbt-alert-box { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+    
+    /* Modallar (Popup'lar) Tam Ekran Davranışı (Bottom Sheet) */
+    .hbt-modal-box { 
         width: 100% !important; 
+        min-width: 100% !important;
         max-width: 100% !important; 
         margin: auto !important; 
-        border-radius: 15px 15px 0 0 !important;
+        border-radius: 20px 20px 0 0 !important;
         position: absolute; 
         bottom: 0; 
         left: 0; 
-        max-height: 85vh; 
-        overflow-y: auto; 
-        padding-bottom: 40px;
+        transform: translate(0, 0);
+        max-height: 90vh; 
+        padding-bottom: env(safe-area-inset-bottom, 20px); /* iOS alt boşluk koruması */
     }
 }

@@ -1406,6 +1406,23 @@ class HBT_Database {
             $start_date, $limit
         ), ARRAY_A );
     }
+	/** Dashboard En Kötü 5 Ürün (Kan Kaybedenler) */
+    public function get_worst_profitable_products( $days = 30, $limit = 5 ) {
+        global $wpdb;
+        $tz = new DateTimeZone('Europe/Istanbul');
+        $dt = new DateTime('now', $tz);
+        $dt->modify("-{$days} days");
+        $start_date = $dt->format('Y-m-d') . ' 00:00:00';
+
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT oi.barcode, oi.product_name, SUM(oi.net_profit) as total_profit, SUM(oi.quantity) as total_qty
+             FROM {$wpdb->prefix}hbt_order_items oi
+             INNER JOIN {$wpdb->prefix}hbt_orders o ON o.id = oi.order_id
+             WHERE o.order_date >= %s AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+             GROUP BY oi.barcode HAVING total_profit < 0 ORDER BY total_profit ASC LIMIT %d",
+            $start_date, $limit
+        ), ARRAY_A );
+    }
 
     /** Dashboard Akıllı Uyarılar Sistemi */
     public function get_smart_alerts() {
@@ -1714,4 +1731,22 @@ class HBT_Database {
 	public function get_total_sync_logs_count(): int {
 		return (int) $this->wpdb->get_var( "SELECT COUNT(id) FROM {$this->wpdb->prefix}hbt_sync_logs" );
 	}
+
+	/** Dashboard İade Kaynaklı Görünmez Zarar (Son 30 Gün) */
+    public function get_return_loss_stats( $days = 30 ) {
+        global $wpdb;
+        $tz = new DateTimeZone('Europe/Istanbul');
+        $dt = new DateTime('now', $tz);
+        $dt->modify("-{$days} days");
+        $start_date = $dt->format('Y-m-d') . ' 00:00:00';
+
+        return $wpdb->get_row( $wpdb->prepare(
+            "SELECT 
+                COALESCE(SUM(shipping_cost), 0) as total_shipping_loss,
+                COALESCE(SUM(net_loss), 0) as total_net_loss
+             FROM {$wpdb->prefix}hbt_returns
+             WHERE return_date >= %s",
+            $start_date
+        ), ARRAY_A );
+    }
 }

@@ -29,6 +29,11 @@ if ( isset($_GET['hbt_test_clear']) ) {
 }
 // -----------------------------------------------------------
 
+if ( isset($_GET['hbt_test_email']) && class_exists('HBT_Cron_Manager') ) {
+    HBT_Cron_Manager::instance()->send_daily_email_report( true );
+    echo '<div class="notice notice-success is-dismissible"><p><strong>TEST BAŞARILI:</strong> Test e-postası gönderim fonksiyonu tetiklendi. Lütfen e-posta kutunuzu (ve gerekiyorsa Spam klasörünü) kontrol edin.</p></div>';
+}
+
 // Orijinal veritabanı bağlantılarınız ve sınıflarınız (Korundu)
 $settings = new HBT_Settings();
 $values   = $settings->get_all();
@@ -216,6 +221,35 @@ $queue_count = is_array($queue) ? count($queue) : 0;
                         <th style="padding: 15px 10px 15px 0;"><label for="critical_loss_threshold" style="font-weight: 600; color: var(--hbt-primary);"><?php esc_html_e( 'Kritik Zarar Eşiği (%)', 'hbt-trendyol-profit-tracker' ); ?></label></th>
                         <td style="padding: 15px 10px;">
                             <input type="number" id="critical_loss_threshold" name="critical_loss_threshold" step="0.1" style="width: 120px; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);" value="<?php echo esc_attr( (string) $values['critical_loss_threshold'] ); ?>">
+                        </td>
+                    </tr>
+                </table>
+
+                <h3 class="hbt-widget-title" style="margin-top: 30px;"><span class="dashicons dashicons-email"></span> <?php esc_html_e( 'Günlük Otomatik E-posta Raporu', 'hbt-trendyol-profit-tracker' ); ?></h3>
+                <p style="color: var(--hbt-text-muted); font-size: 13px; margin-bottom: 20px;">Sistem, her gün belirlediğiniz saatte bir önceki günün (Dün) finansal özetini (Ciro, Net Kâr, İade vb.) belirttiğiniz e-posta adresine otomatik olarak gönderir.</p>
+
+                <table class="form-table">
+                    <tr>
+                        <th style="padding: 15px 10px 15px 0;"><label style="font-weight: 600; color: var(--hbt-primary);"><?php esc_html_e( 'Günlük Rapor Aktif Mi?', 'hbt-trendyol-profit-tracker' ); ?></label></th>
+                        <td style="padding: 15px 10px;">
+                            <label class="hbt-toggle">
+                                <input type="checkbox" id="daily_report_active" name="daily_report_active" <?php checked( (bool) $values['daily_report_active'] ); ?>>
+                                <span class="hbt-toggle-slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 15px 10px 15px 0;"><label for="daily_report_email" style="font-weight: 600; color: var(--hbt-primary);"><?php esc_html_e( 'Gönderilecek E-posta', 'hbt-trendyol-profit-tracker' ); ?></label></th>
+                        <td style="padding: 15px 10px;">
+                            <input type="email" id="daily_report_email" name="daily_report_email" placeholder="ornek@sirketiniz.com" style="width: 250px; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);" value="<?php echo esc_attr( (string) $values['daily_report_email'] ); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 15px 10px 15px 0;"><label for="daily_report_time" style="font-weight: 600; color: var(--hbt-primary);"><?php esc_html_e( 'Gönderim Saati', 'hbt-trendyol-profit-tracker' ); ?></label></th>
+                        <td style="padding: 15px 10px;">
+                            <input type="time" id="daily_report_time" name="daily_report_time" style="width: 120px; padding: 8px 12px; border-radius: var(--hbt-radius-sm); border: 1px solid var(--hbt-border);" value="<?php echo esc_attr( (string) $values['daily_report_time'] ); ?>">
+                            <p class="description" style="margin-top: 8px; margin-bottom: 12px; font-size: 12px;">Örn: 09:00 (Türkiye saatine göre çalışır)</p>
+<a href="?page=hbt-tpt-settings&hbt_test_email=1" class="button button-secondary"><span class="dashicons dashicons-email-alt" style="margin-top:3px;"></span> Şimdi Test Raporu Gönder</a>
                         </td>
                     </tr>
                 </table>

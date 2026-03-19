@@ -42,6 +42,7 @@ class HBT_Admin_Menu {
 		// iOS Web App ve UI İyileştirmeleri (SaaS App Deneyimi)
 		add_action( 'admin_head', array( $this, 'ios_app_meta_and_css' ) );
 		add_action( 'admin_footer', array( $this, 'ios_app_menu_js' ) );
+		add_action( 'wp_ajax_hbt_get_live_usd_rate', array( $this, 'ajax_get_live_usd_rate' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_hbt_test_connection', array( $this, 'ajax_test_connection' ) );
@@ -107,6 +108,7 @@ class HBT_Admin_Menu {
 			array( 'hbt-tpt-fixed-costs', __( 'Sabit Giderler', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_fixed_costs' ) ),
 			array( 'hbt-tpt-ad-expenses', __( 'Reklam Giderleri', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_ad_expenses' ) ), 
 			array( 'hbt-tpt-notifications', $notifications_title, array( $this, 'render_notifications' ) ), // YENİ EKLENEN
+			array( 'hbt-tpt-simulator', __( 'Kâr Simülatörü', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_simulator' ) ),
 			array( 'hbt-tpt-reports', __( 'Raporlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_reports' ) ),
 			array( 'hbt-tpt-settings', __( 'Ayarlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_settings' ) ),
 		
@@ -204,6 +206,12 @@ class HBT_Admin_Menu {
 	public function render_dashboard(): void {
 		$this->check_cap();
 		require HBT_TPT_PLUGIN_DIR . 'admin/views/dashboard.php';
+	}
+
+	/** Render simulator page. */
+	public function render_simulator(): void {
+		$this->check_cap();
+		require HBT_TPT_PLUGIN_DIR . 'admin/views/simulator.php';
 	}
 
 	/** Render stores page. */
@@ -1116,10 +1124,13 @@ public function ajax_bulk_import_costs(): void {
             'profit_last_month_upto_now'  => $stats_last_month_upto_now['net_profit'],
             'revenue_last_month_upto_now' => $stats_last_month_upto_now['revenue'],
 
+        
             // Grafikler ve Listeler
             'trend'             => $db->get_revenue_trend( 30 ),
             'expense_breakdown' => $db->get_dashboard_expense_breakdown( 30 ),
+            'return_loss_stats' => $db->get_return_loss_stats( 30 ),
             'top_products'      => $db->get_top_profitable_products( 30, 5 ),
+            'worst_products'    => $db->get_worst_profitable_products( 30, 5 ),
             'smart_alerts'      => $db->get_smart_alerts(),
             'profit_goal'       => $profit_goal,
             
@@ -1132,6 +1143,7 @@ public function ajax_bulk_import_costs(): void {
             'stores_yesterday_upto_now' => $stores_yesterday_upto_now ?: array(),
             'stores_2days_ago'          => $stores_2days_ago ?: array(),
             'stores_prev_30days'        => $stores_prev_30days ?: array()
+			
         ) );
     }
 
@@ -1379,6 +1391,26 @@ public function ajax_bulk_import_costs(): void {
 			wp_send_json_success( array( 'message' => __( 'Ayarlar kaydedildi.', 'hbt-trendyol-profit-tracker' ) ) );
 		} else {
 			wp_send_json_error( array( 'message' => __( 'Ayarlar kaydedilemedi.', 'hbt-trendyol-profit-tracker' ) ) );
+		}
+	}
+
+	/**
+	 * AJAX: Simülatör için TCMB'den Canlı USD Kurunu Çeker
+	 */
+	public function ajax_get_live_usd_rate(): void {
+		$this->verify_ajax();
+		
+		if ( ! class_exists('HBT_Currency_Service') ) {
+			require_once HBT_TPT_PLUGIN_DIR . 'includes/class-currency-service.php';
+		}
+
+		$rate_obj = HBT_Currency_Service::instance()->get_current_rate();
+
+		if ( $rate_obj && isset($rate_obj->selling_rate) ) {
+			// Ürün maliyeti hesaplarken her zaman Banka Satış (Selling) kuru baz alınır
+			wp_send_json_success( array( 'rate' => $rate_obj->selling_rate ) );
+		} else {
+			wp_send_json_error( array( 'message' => 'Kur çekilemedi.' ) );
 		}
 	}
 	/**

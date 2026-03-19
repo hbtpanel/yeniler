@@ -8,24 +8,35 @@ defined( 'ABSPATH' ) || exit;
             <span class="dashicons dashicons-chart-area"></span> 
             <?php esc_html_e( 'SaaS Finansal Dashboard', 'hbt-trendyol-profit-tracker' ); ?>
         </h1>
-        <div class="hbt-header-actions">
+       <div class="hbt-header-actions">
             <a href="?page=hbt-tpt-stores" class="hbt-btn hbt-btn-outline">
-                <span class="dashicons dashicons-update"></span> Trendyol'dan Çek
+                <span class="dashicons dashicons-update"></span> Veri Çek
             </a>
             <a href="?page=hbt-tpt-ad-expenses" class="hbt-btn hbt-btn-primary">
-                <span class="dashicons dashicons-money-alt"></span> Reklam Gideri Gir
+                <span class="dashicons dashicons-money-alt"></span> Gider Ekle
             </a>
         </div>
     </div>
 
-    <div class="hbt-goal-container" id="hbt-goal-container" title="Aylık Kâr Hedefinizi değiştirmek için buraya tıklayın">
+    <div class="hbt-goal-container" id="hbt-goal-container" title="Aylık Kâr Hedefinizi değiştirmek için buraya tıklayın" style="cursor: pointer;">
         <div class="hbt-goal-info">
-            <h3>Aylık Kâr Hedefi <span class="dashicons dashicons-edit"></span></h3>
+            <h3>Aylık Kâr Hedefi <span class="dashicons dashicons-edit" style="opacity:0.7; font-size:16px; margin-left:5px;"></span></h3>
             <p id="hbt-goal-status-text">Yükleniyor...</p>
         </div>
-        <div class="hbt-goal-bar-wrap">
+        
+        <div class="hbt-goal-bar-wrap" style="margin-bottom: 16px;">
             <div class="hbt-goal-bar-fill" id="hbt-goal-bar"></div>
             <div class="hbt-goal-text" id="hbt-goal-text">%0</div>
+        </div>
+        
+        <div style="margin-top: 16px; padding: 12px 16px; background: rgba(0,0,0,0.2); border-radius: 8px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="background: rgba(252, 211, 77, 0.15); padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                     <span class="dashicons dashicons-lightbulb" style="color: #FDE047; font-size: 18px; width: 18px; height: 18px; margin:0;"></span>
+                </div>
+                <span style="font-size: 13px; font-weight: 600; color: #F8FAFC; letter-spacing: 0.3px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">YZ Tahmini: </span>
+            </div>
+            <div style="font-size: 18px; font-weight: 800; color: #FDE047; text-shadow: 0 1px 3px rgba(0,0,0,0.5);" id="hbt-ai-projected-profit">Hesaplanıyor...</div>
         </div>
     </div>
 
@@ -91,38 +102,42 @@ defined( 'ABSPATH' ) || exit;
 
    
 
-    <div class="hbt-dashboard-row">
-        <div class="hbt-col-6" style="flex: 1; min-width: 48%;">
+   <div class="hbt-dashboard-row">
+        <div class="hbt-col-6" style="flex: 1; min-width: 48%; max-width: 100%;">
             <h3 class="hbt-widget-title"><span class="dashicons dashicons-store"></span> Mağaza Bazlı Net Kâr Özeti</h3>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th>Mağaza Adı</th>
-                        <th>Bugünkü Net Kâr</th>
-                        <th>Dünkü Net Kâr</th>
-                        <th>Son 30 Günlük Net Kâr</th>
-                    </tr>
-                </thead>
-                <tbody id="hbt-store-breakdown-body">
-                    <tr><td colspan="4" style="text-align:center;">Yükleniyor...</td></tr>
-                </tbody>
-            </table>
+            <div style="overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--hbt-border);">
+                <table class="wp-list-table widefat fixed striped" style="min-width: 600px; margin: 0; border: none;">
+                    <thead>
+                        <tr>
+                            <th>Mağaza Adı</th>
+                            <th>Bugünkü Net Kâr</th>
+                            <th>Dünkü Net Kâr</th>
+                            <th>Son 30 Günlük Net Kâr</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hbt-store-breakdown-body">
+                        <tr><td colspan="4" style="text-align:center;">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="hbt-col-6" style="flex: 1; min-width: 48%;">
+        <div class="hbt-col-6" style="flex: 1; min-width: 48%; max-width: 100%;">
             <h3 class="hbt-widget-title"><span class="dashicons dashicons-cart"></span> Mağaza Bazlı Net Ciro Özeti</h3>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th>Mağaza Adı</th>
-                        <th>Bugünkü Ciro</th>
-                        <th>Dünkü Ciro</th>
-                        <th>Son 30 Günlük Ciro</th>
-                    </tr>
-                </thead>
-                <tbody id="hbt-store-revenue-body">
-                    <tr><td colspan="4" style="text-align:center;">Yükleniyor...</td></tr>
-                </tbody>
-            </table>
+            <div style="overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--hbt-border);">
+                <table class="wp-list-table widefat fixed striped" style="min-width: 600px; margin: 0; border: none;">
+                    <thead>
+                        <tr>
+                            <th>Mağaza Adı</th>
+                            <th>Bugünkü Ciro</th>
+                            <th>Dünkü Ciro</th>
+                            <th>Son 30 Günlük Ciro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hbt-store-revenue-body">
+                        <tr><td colspan="4" style="text-align:center;">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -141,17 +156,43 @@ defined( 'ABSPATH' ) || exit;
         </div>
     </div>
 
-    <div class="hbt-dashboard-row">
+    <div class="hbt-dashboard-row" style="align-items: flex-start;">
         <div class="hbt-col-4">
-            <h3 class="hbt-widget-title"><span class="dashicons dashicons-awards"></span> Son 30 Günün Yıldız Ürünleri</h3>
-            <ul class="hbt-top-products-list" id="hbt-top-products">
-                <li>Yükleniyor...</li>
-            </ul>
+            <h3 class="hbt-widget-title"><span class="dashicons dashicons-awards" style="color: var(--hbt-success);"></span> En Çok Kâr Getirenler</h3>
+            <div class="hbt-products-grid" id="hbt-top-products">
+                <p style="color:var(--hbt-text-muted); text-align:center; padding:15px;">Yükleniyor...</p>
+            </div>
         </div>
-        <div class="hbt-col-8">
-            <h3 class="hbt-widget-title"><span class="dashicons dashicons-bell"></span> Akıllı Uyarılar ve Aksiyonlar</h3>
-            <div id="hbt-smart-alerts">
-                <p style="color:var(--hbt-text-muted);">Yükleniyor...</p>
+
+        <div class="hbt-col-4">
+            <h3 class="hbt-widget-title"><span class="dashicons dashicons-warning" style="color: var(--hbt-danger);"></span> Kan Kaybedenler</h3>
+            <div class="hbt-products-grid" id="hbt-worst-products">
+                <p style="color:var(--hbt-text-muted); text-align:center; padding:15px;">Yükleniyor...</p>
+            </div>
+        </div>
+
+        <div class="hbt-col-4">
+            <h3 class="hbt-widget-title"><span class="dashicons dashicons-bell" style="color: var(--hbt-info);"></span> Uyarılar & Aksiyonlar</h3>
+            <div id="hbt-smart-alerts" style="display: flex; flex-direction: column; gap: 12px;">
+                <p style="color:var(--hbt-text-muted); text-align:center; padding:15px;">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="hbt-dashboard-row" id="hbt-return-loss-banner" style="display:none; margin-top: 24px;">
+        <div class="hbt-col-12" style="width:100%; box-sizing: border-box; flex:none; background: #FEF2F2; border: 1px solid #FECACA; border-left: 5px solid #DC2626; padding: 20px 24px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.05);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="background: #FEE2E2; padding: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span class="dashicons dashicons-warning" style="color: #DC2626; font-size: 28px; width: 28px; height: 28px;"></span>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; color: #991B1B; font-size: 16px; font-weight: 700;">İade Kaynaklı "Görünmez Zarar" Tespit Edildi!</h4>
+                    <p style="margin: 0; color: #DC2626; font-size: 13px;">Son 30 günde iadeler yüzünden çöpe giden kargo ve Trendyol kesinti maliyetiniz.</p>
+                </div>
+            </div>
+            <div style="text-align: right; background: #fff; padding: 10px 20px; border-radius: 6px; border: 1px solid #FECACA;">
+                <div style="font-size: 22px; font-weight: 800; color: #DC2626;" id="val-return-loss">0,00 ₺</div>
+                <div style="font-size: 11px; color: #991B1B; font-weight: 600; margin-top: 2px;">Sadece Kargo Zararı: <span id="val-return-shipping">0,00 ₺</span></div>
             </div>
         </div>
     </div>
@@ -252,6 +293,28 @@ jQuery(document).ready(function($) {
         $('#hbt-goal-bar').css('width', displayPercent + '%');
         $('#hbt-goal-text').text('%' + percent.toFixed(1) + ' Tamamlandı');
         $('#hbt-goal-status-text').text(profitMonth.toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ₺ / Hedef: ' + goal.toLocaleString('tr-TR', {minimumFractionDigits:0}) + ' ₺');
+        // YZ Ay Sonu Tahmini (Run-Rate Predictor Algoritması)
+            var today = new Date();
+            var currentDay = today.getDate(); // Ayın kaçıncı günündeyiz (Örn: 19)
+            var daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); // Bu ay kaç çekiyor (Örn: 31)
+            var projectedProfit = 0;
+            
+            if (currentDay > 0 && profitMonth > 0) {
+                // Günlük ortalama hızını bul ve ay sonuna yansıt
+                var dailyAvg = profitMonth / currentDay;
+                projectedProfit = dailyAvg * daysInMonth;
+            } else if (profitMonth <= 0) {
+                // Eğer eksideysek veya ciro yoksa mevcut durumu göster
+                projectedProfit = profitMonth; 
+            }
+
+            // Eğer tahmin edilen kâr hedefi geçiyorsa Yeşil, artıda ama geçmiyorsa Sarı, zarardaysa Kırmızı renk ver.
+            var projColor = projectedProfit >= goal && goal > 0 ? '#86EFAC' : (projectedProfit > 0 ? '#FDE047' : '#FCA5A5');
+            var projSign = projectedProfit > 0 ? '+' : '';
+            
+            $('#hbt-ai-projected-profit')
+                .css('color', projColor)
+                .text(projSign + projectedProfit.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺');
 
         // Akıllı Uyarılar
         var alertsHtml = '';
@@ -264,16 +327,31 @@ jQuery(document).ready(function($) {
         }
         $('#hbt-smart-alerts').html(alertsHtml);
 
-        // En İyi Ürünler
-        var productsHtml = '';
-        if (d.top_products.length > 0) {
-            $.each(d.top_products, function(i, p) {
-                productsHtml += '<li><div class="hbt-tp-name" title="'+p.product_name+'">' + p.product_name + ' <span style="font-weight:normal; color:#64748B; font-size:11px;">('+p.total_qty+' Adet)</span></div> <div class="hbt-tp-profit">+' + parseFloat(p.total_profit).toLocaleString('tr-TR') + ' ₺</div></li>';
-            });
-        } else {
-            productsHtml = '<li><p style="color:#64748B; font-size:13px;">Yeterli satış verisi yok.</p></li>';
+        // Ürün Listelerini Oluşturma Fonksiyonu (Daha Temiz Kod)
+        function renderProductList(data, containerId, successMessage) {
+            var html = '';
+            if (data && data.length > 0) {
+                $.each(data, function(i, p) {
+                    var profitClass = parseFloat(p.total_profit) >= 0 ? 'hbt-tp-profit-success' : 'hbt-tp-profit-danger';
+                    var profitSign = parseFloat(p.total_profit) >= 0 ? '+' : '';
+                    
+                    html += '<div class="hbt-tp-item">' +
+                                '<div class="hbt-tp-name" title="'+p.product_name+'">' + p.product_name + '</div>' +
+                                '<div class="hbt-tp-meta">(' + p.total_qty + ' Adet)</div>' +
+                                '<div class="hbt-tp-profit ' + profitClass + '">' + profitSign + parseFloat(p.total_profit).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺</div>' +
+                            '</div>';
+                });
+            } else {
+                html = '<div class="hbt-no-data">' + successMessage + '</div>';
+            }
+            $('#' + containerId).html(html);
         }
-        $('#hbt-top-products').html(productsHtml);
+
+        // En İyi Ürünler
+        renderProductList(d.top_products, 'hbt-top-products', 'Yeterli satış verisi yok.');
+
+        // Kan Kaybedenler (Zarar Eden Ürünler)
+        renderProductList(d.worst_products, 'hbt-worst-products', 'Harika! Son 30 günde zarar ettiren ürününüz yok. 🎉');
 
        // Mağaza Bazlı Rapor Tablosu (Kâr ve Ciro Trend Yüzdelikleri Eklenmiş Hali)
         var profitMap = {};
@@ -407,7 +485,10 @@ jQuery(document).ready(function($) {
                 return label + ' (%' + percent + ')';
             });
 
-            new Chart(document.getElementById('chart-expenses'), {
+            // Grafik yenilenirken üst üste binmesini engelle
+            if(window.hbtExpenseChart) { window.hbtExpenseChart.destroy(); }
+
+            window.hbtExpenseChart = new Chart(document.getElementById('chart-expenses'), {
                 type: 'doughnut',
                 data: {
                     labels: labelsWithPercent,
@@ -432,6 +513,54 @@ jQuery(document).ready(function($) {
                     }
                 }
             });
+        }
+
+      // İADE KAYNAKLI GÖRÜNMEZ ZARAR KONTROLÜ (MOBİL UYUMLU VERSİYON)
+        if (d.return_loss_stats) {
+            var netLoss = parseFloat(d.return_loss_stats.total_net_loss) || 0;
+            var shipLoss = parseFloat(d.return_loss_stats.total_shipping_loss) || 0;
+            
+            // Eğer net zarar hesaplanmamışsa (0 ise) ama kargo parası yanmışsa, kargo zararını ana zarar kabul et.
+            var displayTotalLoss = Math.max(netLoss, shipLoss);
+
+            // Sadece gerçekten bir zarar varsa (0'dan büyükse) afişi göster
+            if (displayTotalLoss > 0) {
+                $('#val-return-loss').text(displayTotalLoss.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺');
+                $('#val-return-shipping').text(shipLoss.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺');
+                
+                // --- MOBİL UYUMLULUK DOKUNUŞU ---
+                if (window.innerWidth <= 782) {
+                    // Ana konteyneri dikey ve ortalı yap
+                    $('#hbt-return-loss-banner > div').css({ 
+                        'flex-direction': 'column', 
+                        'align-items': 'center', // Merkeze hizala
+                        'gap': '15px', 
+                        'padding': '16px 20px', // Mobilde padding'i biraz daralt
+                        'text-align': 'center' // Yazıları ortala
+                    });
+                    
+                    // Metin bloğundaki ikon ve yazıları dikey ve ortalı yap
+                    $('#hbt-return-loss-banner > div > div:first-child').css({
+                        'flex-direction': 'column',
+                        'align-items': 'center',
+                        'text-align': 'center',
+                        'gap': '8px'
+                    });
+
+                    // Veri bloğunu (Rakamları) dikey ve ortalı yap
+                    $('#hbt-return-loss-banner > div > div:last-child').css({
+                        'width': '100%', 
+                        'text-align': 'center', 
+                        'box-sizing': 'border-box',
+                        'flex-direction': 'column',
+                        'display': 'flex',
+                        'align-items': 'center'
+                    });
+                }
+                
+                $('#hbt-return-loss-banner').slideDown(400);
+            }
+        
         }
     }); // <--- $.post ana veri çekme işleminin kapanışı
     
