@@ -102,19 +102,19 @@ foreach ( $stores as $store ) {
                 </div>
                 <div style="flex: 1;">
                     <label style="font-weight: 600; font-size: 13px; color: var(--hbt-primary); display: block; margin-bottom: 6px;">Komisyon (%)</label>
-                    <input type="text" id="sim-commission" placeholder="15" value="15" style="width: 100%; padding: 10px; font-size: 16px; font-weight: bold;">
+                    <input type="text" id="sim-commission" placeholder="19" value="19" style="width: 100%; padding: 10px; font-size: 16px; font-weight: bold;">
                 </div>
             </div>
 
             <div style="display: flex; gap: 12px; margin-bottom: 16px;">
                 <div style="flex: 1;">
                     <label style="font-weight: 600; font-size: 13px; color: var(--hbt-primary); display: block; margin-bottom: 6px;">Kargo Ücreti (₺)</label>
-                    <input type="text" id="sim-shipping" value="49,50" style="width: 100%; padding: 8px;">
+                    <input type="text" id="sim-shipping" value="81,00" style="width: 100%; padding: 8px;">
                     <small id="sim-shipping-note" style="display:none; color:var(--hbt-success); font-weight:600; font-size:11px; margin-top:4px;">Satış fiyatına göre hesaplanır</small>
                 </div>
                 <div style="flex: 1;">
                     <label style="font-weight: 600; font-size: 13px; color: var(--hbt-primary); display: block; margin-bottom: 6px;">Diğer/Sabit Gider (₺)</label>
-                    <input type="text" id="sim-other" value="5,00" style="width: 100%; padding: 8px;">
+                    <input type="text" id="sim-other" value="32,00" style="width: 100%; padding: 8px;">
                     <small id="sim-other-note" style="display:none; color:var(--hbt-success); font-weight:600; font-size:11px; margin-top:4px;">Mağazadan çekildi</small>
                 </div>
             </div>
