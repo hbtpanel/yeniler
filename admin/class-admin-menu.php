@@ -109,6 +109,8 @@ class HBT_Admin_Menu {
 			array( 'hbt-tpt-ad-expenses', __( 'Reklam Giderleri', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_ad_expenses' ) ), 
 			array( 'hbt-tpt-notifications', $notifications_title, array( $this, 'render_notifications' ) ), // YENİ EKLENEN
 			array( 'hbt-tpt-simulator', __( 'Kâr Simülatörü', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_simulator' ) ),
+			array( 'hbt-tpt-plus-simulator', __( 'Plus Simülatörü', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_plus_simulator' ) ), // PLUS SİMÜLATÖRÜ EKLENDİ
+			array( 'hbt-tpt-avantajli-etiketler', __( 'Avantajlı Etiketler', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_avantajli_etiketler' ) ),
 			array( 'hbt-tpt-reports', __( 'Raporlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_reports' ) ),
 			array( 'hbt-tpt-settings', __( 'Ayarlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_settings' ) ),
 		
@@ -212,6 +214,25 @@ class HBT_Admin_Menu {
 	public function render_simulator(): void {
 		$this->check_cap();
 		require HBT_TPT_PLUGIN_DIR . 'admin/views/simulator.php';
+	}
+
+	/**
+ * Render Avantajlı Etiketler page.
+ */
+public function render_avantajli_etiketler(): void {
+    require_once HBT_TPT_PLUGIN_DIR . 'admin/views/avantajli-etiketler.php';
+}
+
+	/** Render plus simulator page. */
+	public function render_plus_simulator(): void {
+		$this->check_cap();
+		// Dosya henüz yoksa hata vermemesi için if (file_exists) kontrolü koyuyoruz!
+		$file_path = HBT_TPT_PLUGIN_DIR . 'admin/views/plus-simulator.php';
+		if ( file_exists( $file_path ) ) {
+			require $file_path;
+		} else {
+			echo '<div class="wrap"><h2>Plus Simülatörü</h2><p>Görünüm dosyası (plus-simulator.php) henüz oluşturulmadı!</p></div>';
+		}
 	}
 
 	/** Render stores page. */
