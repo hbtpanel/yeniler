@@ -20,8 +20,22 @@ $stores = $wpdb->get_results( "SELECT id, store_name FROM {$wpdb->prefix}hbt_sto
 
 $simulation_results = [];
 $error_message = '';
+$is_archive_view = false;
 
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && wp_verify_nonce( $_POST['plus_simulator_nonce'], 'run_plus_simulation' ) ) {
+// --- 1. ARŞİVDEN VERİ ÇAĞIRMA ---
+if ( isset($_GET['view_archive']) ) {
+    $archive_id = intval($_GET['view_archive']);
+    $archive_row = $wpdb->get_row($wpdb->prepare("SELECT detay_verisi FROM {$wpdb->prefix}hbt_plus_simulator_arsiv WHERE id = %d", $archive_id));
+    if ($archive_row && !empty($archive_row->detay_verisi)) {
+        $simulation_results = json_decode($archive_row->detay_verisi, true);
+        $is_archive_view = true;
+    } else {
+        $error_message = 'Arşiv kaydı bulunamadı veya veri bozuk.';
+    }
+}
+
+// --- 2. YENİ EXCEL YÜKLEMESİ VE SİMÜLASYON ---
+if ( !$is_archive_view && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && wp_verify_nonce( $_POST['plus_simulator_nonce'], 'run_plus_simulation' ) ) {
     
     $store_id = intval( $_POST['store_id'] );
     $file = $_FILES['plus_excel'];
@@ -32,7 +46,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
         $rows = [];
         $file_path = $file['tmp_name'];
 
-        // 1. ANA MOTOR: Gerçek ve hatasız Excel dosyaları için SimpleXLSX
+        // 1. ANA MOTOR
         if ( class_exists( '\Shuchkin\SimpleXLSX' ) ) {
             $xlsx = \Shuchkin\SimpleXLSX::parse( $file_path );
             if ( $xlsx ) $rows = $xlsx->rows();
@@ -41,33 +55,27 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
             if ( $xlsx ) $rows = $xlsx->rows();
         }
 
-        // 2. YEDEK MOTOR: Brute-Force ZIP Extractor (Trendyol'un eksik/hatalı XLSX'leri için kesin çözüm)
+        // 2. YEDEK MOTOR (Brute-Force ZIP Extractor)
         if ( empty($rows) && substr(file_get_contents($file_path, false, null, 0, 4), 0, 4) === "PK\x03\x04" ) {
             if (class_exists('ZipArchive')) {
                 $zip = new ZipArchive();
                 if ($zip->open($file_path) === TRUE) {
                     $shared_strings = [];
-                    
-                    // Metin Havuzunu (sharedStrings) Çıkar
                     $strings_xml = $zip->getFromName('xl/sharedStrings.xml');
                     if ($strings_xml) {
                         $xml = simplexml_load_string($strings_xml);
                         if ($xml && isset($xml->si)) {
                             foreach ($xml->si as $si) {
                                 $text = '';
-                                if (isset($si->t)) {
-                                    $text = (string) $si->t;
-                                } elseif (isset($si->r)) {
-                                    foreach ($si->r as $r) {
-                                        if (isset($r->t)) $text .= (string) $r->t;
-                                    }
+                                if (isset($si->t)) $text = (string) $si->t;
+                                elseif (isset($si->r)) {
+                                    foreach ($si->r as $r) { if (isset($r->t)) $text .= (string) $r->t; }
                                 }
                                 $shared_strings[] = $text;
                             }
                         }
                     }
 
-                    // Ham Excel Verisini (sheet1) Çıkar ve Eşleştir
                     $sheet_xml = $zip->getFromName('xl/worksheets/sheet1.xml');
                     if ($sheet_xml) {
                         $xml = simplexml_load_string($sheet_xml);
@@ -82,7 +90,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                                         if (isset($c->is->t)) $val = (string)$c->is->t;
                                     }
                                     
-                                    // Sütun kaymalarını önlemek için gerçek harf pozisyonunu bul (A=0, B=1)
                                     $coord = (string) $c['r'];
                                     preg_match('/[A-Z]+/', $coord, $match);
                                     $col_letters = $match[0] ?? 'A';
@@ -92,7 +99,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                                         $col_idx = $col_idx * 26 + (ord($col_letters[$i]) - 64);
                                     }
                                     $col_idx -= 1;
-                                    
                                     $row_data[$col_idx] = $val;
                                 }
                                 if (!empty($row_data)) {
@@ -111,7 +117,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
             }
         }
 
-        // 3. ÜÇÜNCÜ MOTOR: Eğer dosya gerçekten CSV ise (Excel/ZIP değilse)
+        // 3. ÜÇÜNCÜ MOTOR
         if ( empty($rows) && substr(file_get_contents($file_path, false, null, 0, 2), 0, 2) !== "PK" ) {
             $content = file_get_contents( $file_path );
             if ( substr( $content, 0, 2 ) === "\xFF\xFE" || strpos($content, "\x00") !== false ) {
@@ -119,7 +125,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
             } else {
                 $content = preg_replace("/^\xEF\xBB\xBF/", '', $content); 
             }
-            
             $lines = explode( "\n", $content );
             if ( count( $lines ) > 1 ) {
                 $delimiter = "\t";
@@ -136,9 +141,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
 
         // --- VERİLERİ İŞLEME VE MATEMATİKSEL HESAPLAMALAR ---
         if ( ! empty( $rows ) && count( $rows ) > 1 ) {
-            $header = array_shift( $rows ); // Başlıkları al
+            $header = array_shift( $rows );
             
-            // DİNAMİK SÜTUN TESPİTİ
             $b_idx = 2; $f_idx = 9; $k_idx = 11; $pf_idx = 12; $pk_idx = 13;
             foreach ($header as $index => $col_name) {
                 $col_name = trim($col_name);
@@ -151,11 +155,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
             
             $usd_rate = (float) $wpdb->get_var( "SELECT buying_rate FROM {$wpdb->prefix}hbt_currency_rates ORDER BY rate_date DESC LIMIT 1" ) ?: 33.00;
             
-            // SABİT GİDERLERİN DOĞRU ŞEKİLDE ÇEKİLMESİ VE TOPLANMASI
             $fixed_costs_opt = get_option( 'hbt_fixed_costs', array() );
             $store_fc = $fixed_costs_opt[ $store_id ] ?? array();
             
-            // Personel, Paketleme ve Diğer giderleri toplayarak sipariş başına düşen toplam sabit gideri bul
             $personnel_cost = (float) ($store_fc['personnel'] ?? 0);
             $packaging_cost = (float) ($store_fc['packaging'] ?? 0);
             $other_cost     = (float) ($store_fc['other'] ?? 0);
@@ -177,7 +179,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                 
                 $urun_isim = $product ? $product->product_name : sanitize_text_field( $data[0] );
                 $urun_maliyet_tl = $product ? (float) $product->cost_usd * $usd_rate : 0;
-                $maliyet_uyarisi = $product ? '' : ' <span style="color:#d63638; font-size:11px; font-weight:bold; background:#fcf0f1; padding:2px 4px; border-radius:3px;">(Eşleşmedi / Maliyet 0)</span>';
+                $maliyet_uyarisi = $product ? '' : ' <span style="color:#d63638; font-size:11px; font-weight:bold; background:#fcf0f1; padding:2px 4px; border-radius:3px;">(Maliyet: 0)</span>';
                 
                 $guncel_kargo = (float) $wpdb->get_var( $wpdb->prepare( "SELECT cost_tl FROM {$wpdb->prefix}hbt_shipping_costs WHERE store_id = %d AND price_min <= %f AND (price_max >= %f OR price_max IS NULL) ORDER BY id DESC LIMIT 1", $store_id, $guncel_fiyat, $guncel_fiyat ) );
                 $plus_kargo = (float) $wpdb->get_var( $wpdb->prepare( "SELECT cost_tl FROM {$wpdb->prefix}hbt_shipping_costs WHERE store_id = %d AND price_min <= %f AND (price_max >= %f OR price_max IS NULL) ORDER BY id DESC LIMIT 1", $store_id, $plus_fiyat, $plus_fiyat ) );
@@ -220,9 +222,27 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                 ];
             }
             
-            if (empty($simulation_results)) {
+            // --- 3. BAŞARILI İŞLEM SONRASI VERİTABANINA KAYDETME ---
+            if (!empty($simulation_results)) {
+                $plus_yesil = 0;
+                foreach($simulation_results as $r) {
+                    if ($r['color_class'] === 'blink-green') $plus_yesil++;
+                }
+
+                $wpdb->insert(
+                    "{$wpdb->prefix}hbt_plus_simulator_arsiv",
+                    array(
+                        'maza_id'      => $store_id,
+                        'toplam_urun'  => count($simulation_results),
+                        'plus_yesil'   => $plus_yesil,
+                        'detay_verisi' => wp_json_encode($simulation_results)
+                    ),
+                    array('%d', '%d', '%d', '%s')
+                );
+            } else {
                 $error_message = 'Dosya başarıyla okundu ancak eşleşen ürün bulunamadı.';
             }
+
         } else {
             $error_message = 'Dosya yapısı çözülemedi veya boş bir dosya yüklediniz.';
         }
@@ -262,12 +282,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
 
 <div class="wrap hbt-simulator-wrap">
     <h1>Trendyol Plus Komisyon Simülatörü</h1>
-    <p>💡 <b>İpucu:</b> Trendyol'dan indirdiğiniz dosyayı direkt yükleyebilirsiniz. Özel "Brute-Force" kurtarma motoru sayesinde hatasız şekilde okunacaktır.</p>
     
+    <?php if ($is_archive_view): ?>
+        <div class="notice notice-info" style="border-left-color: #2271b1;">
+            <p><strong>🗄️ ARŞİV GÖRÜNÜMÜ:</strong> Şu an <b>Geçmiş bir hesaplamayı</b> inceliyorsunuz. <a href="<?php echo admin_url('admin.php?page=hbt-tpt-plus-simulator'); ?>">Yeni Hesaplama Yapmak İçin Tıklayın.</a></p>
+        </div>
+    <?php else: ?>
+        <p>💡 <b>İpucu:</b> Trendyol'dan indirdiğiniz dosyayı direkt yükleyebilirsiniz. Özel "Brute-Force" kurtarma motoru sayesinde hatasız okunacak ve geçmişe otomatik kaydedilecektir.</p>
+    <?php endif; ?>
+
     <?php if ( ! empty( $error_message ) ) : ?>
         <div class="notice notice-error is-dismissible"><p><?php echo esc_html( $error_message ); ?></p></div>
     <?php endif; ?>
 
+    <?php if (!$is_archive_view): ?>
     <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #2271b1;">
         <form method="post" enctype="multipart/form-data" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
             <?php wp_nonce_field('run_plus_simulation', 'plus_simulator_nonce'); ?>
@@ -294,23 +322,25 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
             </div>
         </form>
     </div>
+    <?php endif; ?>
 
     <?php if ( ! empty( $simulation_results ) ) : ?>
         <div class="hbt-filter-bar">
-            <input type="text" id="filterName" placeholder="🔍 Ürün Adı ile ara...">
-            <input type="text" id="filterBarcode" placeholder="🔍 Barkod ile ara...">
+            <input type="text" id="filterName" placeholder="🔍 Ürün Adı veya Barkod ile ara...">
             <select id="filterMargin">
-                <option value="all">📊 Tüm Kâr Oranları (Filtreleme)</option>
-                <option value="green">🟢 Kâr %30 ve Üzeri (Süper)</option>
-                <option value="yellow">🟡 Kâr %20 - %29.99 (İyi)</option>
-                <option value="darkred">🔴 Kâr %10 - %19.99 (Riskli)</option>
-                <option value="lightred">⭕ Kâr %10 Altı (Zarar/Kötü)</option>
+                <option value="all">📊 Tüm Kâr Oranlarını Göster</option>
+                <option value="green">🟢 Plus'ta Kâr %30+ Olanlar</option>
+                <option value="yellow">🟡 Plus'ta Kâr %20-30 Olanlar</option>
+                <option value="darkred">🔴 Plus'ta Kâr %10-20 Olanlar</option>
+                <option value="lightred">⭕ Plus'ta Zarar / Kötü Olanlar</option>
             </select>
         </div>
 
         <div class="hbt-cards-container" id="cardsContainer">
             <?php foreach ( $simulation_results as $row ) : ?>
-                <div class="hbt-card" data-name="<?php echo esc_attr( strtolower( strip_tags($row['isim']) ) ); ?>" data-barcode="<?php echo esc_attr( $row['barkod'] ); ?>" data-color="<?php echo esc_attr( $row['color_class'] ); ?>">
+                <div class="hbt-card" 
+                     data-search="<?php echo esc_attr( strtolower( strip_tags($row['isim']) . ' ' . $row['barkod'] ) ); ?>" 
+                     data-colors="<?php echo esc_attr( $row['color_class'] ); ?>">
                     <div class="hbt-card-header">
                         <h3><?php echo wp_kses_post( $row['isim'] ); ?></h3>
                         <small>Barkod: <?php echo esc_html( $row['barkod'] ); ?></small>
@@ -320,9 +350,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                             <h4 style="margin:0 0 15px 0; color:#444; text-align:center; font-size: 14px;">Mevcut Satış</h4>
                             <div class="hbt-stat-row"><span>Satış Fiyatı:</span> <span><?php echo number_format( $row['guncel_fiyat'], 2 ); ?> ₺</span></div>
                             <div class="hbt-stat-row"><span>Ürün Maliyeti:</span> <span>-<?php echo number_format( $row['urun_maliyet_tl'], 2 ); ?> ₺</span></div>
-                            <div class="hbt-stat-row"><span>Komisyon (%<?php echo $row['guncel_komisyon_orani']; ?>):</span> <span>-<?php echo number_format( $row['guncel_komisyon_tutari'], 2 ); ?> ₺</span></div>
-                            <div class="hbt-stat-row"><span>Kargo Maliyeti:</span> <span>-<?php echo number_format( $row['guncel_kargo'], 2 ); ?> ₺</span></div>
                             <div class="hbt-stat-row"><span>Sabit Giderler:</span> <span>-<?php echo number_format( $row['guncel_gider'], 2 ); ?> ₺</span></div>
+                            <div class="hbt-stat-row"><span>Komisyon (%<?php echo $row['guncel_komisyon_orani']; ?>):</span> <span>-<?php echo number_format( $row['guncel_komisyon_tutari'], 2 ); ?> ₺</span></div>
+                            <div class="hbt-stat-row"><span>Kargo:</span> <span>-<?php echo number_format( $row['guncel_kargo'], 2 ); ?> ₺</span></div>
                             <div class="hbt-profit-result" style="background: #e9ecef; border: 1px solid #ced4da; color: #495057;">
                                 <span class="margin">Kâr Oranı: <strong>%<?php echo number_format( $row['guncel_kar_orani'], 2 ); ?></strong></span>
                                 <span class="amount"><?php echo number_format( $row['guncel_kar_tl'], 2 ); ?> ₺</span>
@@ -332,9 +362,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                             <h4 style="margin:0 0 15px 0; color:#d63638; text-align:center; font-size: 14px;">🔥 Trendyol Plus</h4>
                             <div class="hbt-stat-row"><span>Plus Fiyatı:</span> <span><?php echo number_format( $row['plus_fiyat'], 2 ); ?> ₺</span></div>
                             <div class="hbt-stat-row"><span>Ürün Maliyeti:</span> <span>-<?php echo number_format( $row['urun_maliyet_tl'], 2 ); ?> ₺</span></div>
-                            <div class="hbt-stat-row"><span>Komisyon (%<?php echo $row['plus_komisyon_orani']; ?>):</span> <span>-<?php echo number_format( $row['plus_komisyon_tutari'], 2 ); ?> ₺</span></div>
-                            <div class="hbt-stat-row"><span>Kargo Maliyeti:</span> <span>-<?php echo number_format( $row['plus_kargo'], 2 ); ?> ₺</span></div>
                             <div class="hbt-stat-row"><span>Sabit Giderler:</span> <span>-<?php echo number_format( $row['plus_gider'], 2 ); ?> ₺</span></div>
+                            <div class="hbt-stat-row"><span>Komisyon (%<?php echo $row['plus_komisyon_orani']; ?>):</span> <span>-<?php echo number_format( $row['plus_komisyon_tutari'], 2 ); ?> ₺</span></div>
+                            <div class="hbt-stat-row"><span>Kargo:</span> <span>-<?php echo number_format( $row['plus_kargo'], 2 ); ?> ₺</span></div>
                             <div class="hbt-profit-result">
                                 <span class="margin">Yeni Kâr: <strong>%<?php echo number_format( $row['plus_kar_orani'], 2 ); ?></strong></span>
                                 <span class="amount"><?php echo number_format( $row['plus_kar_tl'], 2 ); ?> ₺</span>
@@ -347,33 +377,29 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                const filterName = document.getElementById('filterName');
-                const filterBarcode = document.getElementById('filterBarcode');
+                const filterInput = document.getElementById('filterName');
                 const filterMargin = document.getElementById('filterMargin');
                 const cards = document.querySelectorAll('.hbt-card');
 
-                function filterCards() {
-                    const nameVal = filterName.value.toLowerCase();
-                    const barcodeVal = filterBarcode.value.toLowerCase();
+                function runFilters() {
+                    const searchVal = filterInput.value.toLowerCase();
                     const marginVal = filterMargin.value;
 
                     cards.forEach(card => {
-                        const cardName = card.getAttribute('data-name');
-                        const cardBarcode = card.getAttribute('data-barcode').toLowerCase();
-                        const cardColor = card.getAttribute('data-color');
+                        const searchableText = card.getAttribute('data-search');
+                        const cardColors = card.getAttribute('data-colors');
                         
-                        let matchName = cardName.includes(nameVal);
-                        let matchBarcode = cardBarcode.includes(barcodeVal);
+                        let matchSearch = searchableText.includes(searchVal);
                         let matchMargin = true;
 
                         if (marginVal !== 'all') {
-                            if (marginVal === 'green' && cardColor !== 'blink-green') matchMargin = false;
-                            if (marginVal === 'yellow' && cardColor !== 'blink-yellow') matchMargin = false;
-                            if (marginVal === 'darkred' && cardColor !== 'blink-dark-red') matchMargin = false;
-                            if (marginVal === 'lightred' && cardColor !== 'blink-light-red') matchMargin = false;
+                            if (marginVal === 'green' && cardColors !== 'blink-green') matchMargin = false;
+                            if (marginVal === 'yellow' && cardColors !== 'blink-yellow') matchMargin = false;
+                            if (marginVal === 'darkred' && cardColors !== 'blink-dark-red') matchMargin = false;
+                            if (marginVal === 'lightred' && cardColors !== 'blink-light-red') matchMargin = false;
                         }
 
-                        if (matchName && matchBarcode && matchMargin) {
+                        if (matchSearch && matchMargin) {
                             card.style.display = 'flex';
                         } else {
                             card.style.display = 'none';
@@ -381,10 +407,77 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['plus_excel'] ) && 
                     });
                 }
 
-                filterName.addEventListener('input', filterCards);
-                filterBarcode.addEventListener('input', filterCards);
-                filterMargin.addEventListener('change', filterCards);
+                filterInput.addEventListener('input', runFilters);
+                filterMargin.addEventListener('change', runFilters);
             });
         </script>
     <?php endif; ?>
+
+    <div class="hbt-card" style="margin-top:40px; border-top: 3px solid #2271b1;">
+        <div class="hbt-card-header" style="background: #2c3338;"><h3>🗄️ Geçmiş Hesaplama Arşivi</h3></div>
+        <div style="padding:15px; overflow-x:auto;">
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th style="font-weight:bold; width: 20%;">Tarih</th>
+                        <th style="font-weight:bold; width: 25%;">Mağaza</th>
+                        <th style="font-weight:bold; width: 15%;">Toplam Ürün</th>
+                        <th style="font-weight:bold; color:#2e7d32;">🔥 Plus Fırsatı (Yeşil)</th>
+                        <th style="font-weight:bold; text-align:right;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $per_page = 10;
+                    $current_p = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+                    $offset = ($current_p - 1) * $per_page;
+                    
+                    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}hbt_plus_simulator_arsiv'") == $wpdb->prefix . 'hbt_plus_simulator_arsiv';
+                    
+                    if ($table_exists) {
+                        $total_rows = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hbt_plus_simulator_arsiv");
+                        if ($total_rows > 0) {
+                            $arsiv_logs = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}hbt_plus_simulator_arsiv ORDER BY kayit_tarihi DESC LIMIT %d OFFSET %d", $per_page, $offset));
+                            foreach ($arsiv_logs as $log) :
+                                $m_adi = $wpdb->get_var($wpdb->prepare("SELECT store_name FROM {$wpdb->prefix}hbt_stores WHERE id = %d", $log->maza_id));
+                    ?>
+                        <tr>
+                            <td><b><?php echo date('d.m.Y H:i', strtotime($log->kayit_tarihi)); ?></b></td>
+                            <td><?php echo esc_html($m_adi); ?></td>
+                            <td><?php echo $log->toplam_urun; ?> Ürün</td>
+                            <td><span style="background:#e8f5e9; color:#2e7d32; padding:3px 12px; border-radius:12px; font-weight:600;"><?php echo $log->plus_yesil; ?> Ürün</span></td>
+                            <td style="text-align:right;">
+                                <a href="<?php echo admin_url('admin.php?page=hbt-tpt-plus-simulator&view_archive=' . $log->id); ?>" class="button button-small" style="background:#fff; border-color:#2271b1; color:#2271b1;">Detayları Yükle</a>
+                            </td>
+                        </tr>
+                    <?php 
+                            endforeach; 
+                        } else {
+                            echo '<tr><td colspan="5">Henüz kaydedilmiş bir simülasyon bulunamadı.</td></tr>';
+                        }
+                    } else {
+                        echo '<tr><td colspan="5">Tablo henüz oluşturulmadı. Lütfen eklentiyi deaktif edip tekrar aktif edin.</td></tr>';
+                    }
+                    ?>
+                </tbody>
+            </table>
+            
+            <?php if (isset($total_rows) && $total_rows > $per_page): ?>
+            <div class="tablenav bottom">
+                <div class="tablenav-pages">
+                    <?php
+                    echo paginate_links( array(
+                        'base'    => add_query_arg( 'paged', '%#%' ),
+                        'format'  => '',
+                        'prev_text' => '&laquo;',
+                        'next_text' => '&raquo;',
+                        'total'   => ceil($total_rows / $per_page),
+                        'current' => $current_p
+                    ) );
+                    ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>

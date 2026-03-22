@@ -20,12 +20,24 @@ $stores = $wpdb->get_results( "SELECT id, store_name FROM {$wpdb->prefix}hbt_sto
 
 $simulation_results = [];
 $error_message = '';
+$is_archive_view = false;
+
+// --- 1. ARŞİVDEN VERİ ÇAĞIRMA (Eğer "Detayları Yükle" butonuna basıldıysa) ---
+if ( isset($_GET['view_archive']) ) {
+    $archive_id = intval($_GET['view_archive']);
+    $archive_row = $wpdb->get_row($wpdb->prepare("SELECT detay_verisi FROM {$wpdb->prefix}hbt_avantajli_arsiv WHERE id = %d", $archive_id));
+    if ($archive_row && !empty($archive_row->detay_verisi)) {
+        $simulation_results = json_decode($archive_row->detay_verisi, true);
+        $is_archive_view = true;
+    } else {
+        $error_message = 'Arşiv kaydı bulunamadı veya veri bozuk.';
+    }
+}
 
 // YENİLMEZ (BRUTE-FORCE) EXCEL/CSV OKUMA MOTORU FONKSİYONU
 if (!function_exists('hbt_parse_trendyol_file')) {
     function hbt_parse_trendyol_file($file_path) {
         $rows = [];
-        // 1. ANA MOTOR (SimpleXLSX)
         if ( class_exists( '\Shuchkin\SimpleXLSX' ) ) {
             $xlsx = \Shuchkin\SimpleXLSX::parse( $file_path );
             if ( $xlsx ) $rows = $xlsx->rows();
@@ -34,7 +46,6 @@ if (!function_exists('hbt_parse_trendyol_file')) {
             if ( $xlsx ) $rows = $xlsx->rows();
         }
 
-        // 2. YEDEK MOTOR (Brute-Force ZIP Extractor)
         if ( empty($rows) && substr(file_get_contents($file_path, false, null, 0, 4), 0, 4) === "PK\x03\x04" ) {
             if (class_exists('ZipArchive')) {
                 $zip = new ZipArchive();
@@ -96,7 +107,6 @@ if (!function_exists('hbt_parse_trendyol_file')) {
             }
         }
 
-        // 3. ÜÇÜNCÜ MOTOR (Ham Metin/CSV Çevirici)
         if ( empty($rows) && substr(file_get_contents($file_path, false, null, 0, 2), 0, 2) !== "PK" ) {
             $content = file_get_contents( $file_path );
             if ( substr( $content, 0, 2 ) === "\xFF\xFE" || strpos($content, "\x00") !== false ) {
@@ -122,26 +132,23 @@ if (!function_exists('hbt_parse_trendyol_file')) {
 }
 
 function hbt_clean_price($price_str) {
-    // Fiyatlardaki " tırnakları, boşlukları sil ve virgülü noktaya çevir
     $price = str_replace(['"', ' '], '', $price_str);
     return floatval(str_replace(',', '.', $price));
 }
 
-// FORM GÖNDERİMİ
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_FILES['komisyon_excel'] ) && wp_verify_nonce( $_POST['avantajli_nonce'], 'run_avantajli_simulation' ) ) {
+// --- 2. YENİ EXCEL YÜKLEMESİ VE SİMÜLASYON ---
+if ( !$is_archive_view && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_FILES['komisyon_excel'] ) && wp_verify_nonce( $_POST['avantajli_nonce'], 'run_avantajli_simulation' ) ) {
     
     $store_id = intval( $_POST['store_id'] );
     
-    // Dosyaları Oku
     $yildiz_rows = hbt_parse_trendyol_file($_FILES['yildiz_excel']['tmp_name']);
     $komisyon_rows = hbt_parse_trendyol_file($_FILES['komisyon_excel']['tmp_name']);
 
     if ( count($yildiz_rows) > 1 && count($komisyon_rows) > 1 ) {
         
-        // KOMİSYON VERİLERİNİ BARKODA GÖRE DİZİYE AL
         $komisyon_data = [];
         $kom_header = array_shift($komisyon_rows);
-        $k_idx = array_flip(array_map('trim', $kom_header)); // Başlıkları index'e çevir
+        $k_idx = array_flip(array_map('trim', $kom_header));
 
         foreach ($komisyon_rows as $row) {
             $barkod = isset($k_idx['BARKOD']) && isset($row[$k_idx['BARKOD']]) ? preg_replace('/[^a-zA-Z0-9_-]/', '', $row[$k_idx['BARKOD']]) : '';
@@ -162,7 +169,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
             ];
         }
 
-        // YILDIZ VERİLERİNİ İŞLE VE SİMÜLE ET
         $yil_header = array_shift($yildiz_rows);
         $y_idx = array_flip(array_map('trim', $yil_header));
 
@@ -190,16 +196,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
 
             $k_data = $komisyon_data[$barkod];
 
-            // Her fiyat için komisyon bulucu fonksiyon
             $get_commission = function($fiyat) use ($k_data) {
                 if ($fiyat >= $k_data['L1']) return $k_data['K1'];
                 if ($fiyat >= $k_data['L2_alt'] && $fiyat <= $k_data['L2_ust']) return $k_data['K2'];
                 if ($fiyat >= $k_data['L3_alt'] && $fiyat <= $k_data['L3_ust']) return $k_data['K3'];
                 if ($fiyat <= $k_data['L4_ust']) return $k_data['K4'];
-                return $k_data['Guncel_Kom']; // Eşleşmezse günceli al
+                return $k_data['Guncel_Kom'];
             };
 
-            // Her fiyat için kargo, komisyon ve kâr hesaplayıcı
             $calc_profit = function($fiyat) use ($wpdb, $store_id, $urun_maliyet_tl, $order_fixed_cost, $get_commission) {
                 if ($fiyat <= 0) return null;
                 $kargo = (float) $wpdb->get_var( $wpdb->prepare( "SELECT cost_tl FROM {$wpdb->prefix}hbt_shipping_costs WHERE store_id = %d AND price_min <= %f AND (price_max >= %f OR price_max IS NULL) ORDER BY id DESC LIMIT 1", $store_id, $fiyat, $fiyat ) );
@@ -242,7 +246,28 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
             ];
         }
 
-        if (empty($simulation_results)) {
+        // --- 3. BAŞARILI İŞLEM SONRASI VERİTABANINA KAYDETME ---
+        if (!empty($simulation_results)) {
+            $y1_y = 0; $y2_y = 0; $y3_y = 0;
+            foreach($simulation_results as $r) {
+                if (isset($r['y1']['color']) && $r['y1']['color'] === 'blink-green') $y1_y++;
+                if (isset($r['y2']['color']) && $r['y2']['color'] === 'blink-green') $y2_y++;
+                if (isset($r['y3']['color']) && $r['y3']['color'] === 'blink-green') $y3_y++;
+            }
+
+            $wpdb->insert(
+                "{$wpdb->prefix}hbt_avantajli_arsiv",
+                array(
+                    'maza_id'      => $store_id,
+                    'toplam_urun'  => count($simulation_results),
+                    'yildiz1_yesil'=> $y1_y,
+                    'yildiz2_yesil'=> $y2_y,
+                    'yildiz3_yesil'=> $y3_y,
+                    'detay_verisi' => wp_json_encode($simulation_results)
+                ),
+                array('%d', '%d', '%d', '%d', '%d', '%s')
+            );
+        } else {
             $error_message = 'Dosyalar okundu ancak iki dosya arasında eşleşen barkod veya veritabanında geçerli ürün bulunamadı.';
         }
 
@@ -288,12 +313,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
 
 <div class="wrap hbt-simulator-wrap">
     <h1>Avantajlı Etiketler (Yıldız Simülatörü)</h1>
-    <p>💡 <b>İpucu:</b> Trendyol'dan indirdiğiniz <b>"Yıldızlı Ürün Etiketleri"</b> ve <b>"Komisyon Tarifeleri"</b> dosyalarını aynı anda yükleyin. Sistem barkodları eşleştirip her yıldız kademesi için kârınızı hesaplayacaktır.</p>
     
+    <?php if ($is_archive_view): ?>
+        <div class="notice notice-info" style="border-left-color: #f57f17;">
+            <p><strong>🗄️ ARŞİV GÖRÜNÜMÜ:</strong> Şu an <b>Geçmiş bir hesaplamayı</b> inceliyorsunuz. <a href="<?php echo admin_url('admin.php?page=hbt-tpt-avantajli-etiketler'); ?>">Yeni Hesaplama Yapmak İçin Tıklayın.</a></p>
+        </div>
+    <?php else: ?>
+        <p>💡 <b>İpucu:</b> Trendyol'dan indirdiğiniz <b>"Yıldızlı Ürün Etiketleri"</b> ve <b>"Komisyon Tarifeleri"</b> dosyalarını aynı anda yükleyin. Sistem barkodları eşleştirip her yıldız kademesi için kârınızı hesaplayacak ve veritabanına otomatik kaydedecektir.</p>
+    <?php endif; ?>
+
     <?php if ( ! empty( $error_message ) ) : ?>
         <div class="notice notice-error is-dismissible"><p><?php echo esc_html( $error_message ); ?></p></div>
     <?php endif; ?>
 
+    <?php if (!$is_archive_view): ?>
     <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #f57f17;">
         <form method="post" enctype="multipart/form-data" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
             <?php wp_nonce_field('run_avantajli_simulation', 'avantajli_nonce'); ?>
@@ -324,29 +357,30 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
             </div>
         </form>
     </div>
+    <?php endif; ?>
 
     <?php if ( ! empty( $simulation_results ) ) : ?>
         <div class="hbt-filter-bar">
             <input type="text" id="filterName" placeholder="🔍 Ürün Adı veya Barkod ile ara...">
             <select id="filterMargin">
                 <option value="all">📊 Tüm Kâr Oranlarını Göster</option>
-                <option value="green">🟢 Herhangi Bir Yıldızda Kâr %30+ Olanlar</option>
-                <option value="yellow">🟡 Herhangi Bir Yıldızda Kâr %20-30 Olanlar</option>
-                <option value="darkred">🔴 Herhangi Bir Yıldızda Kâr %10-20 Olanlar</option>
-<option value="lightred">⭕ İçinde Zarar / Kötü Olanlar</option>            </select>
+                <option value="green">🟢 Yıldızlardan Herhangi Biri %30+ Olanlar</option>
+                <option value="yellow">🟡 Yıldızlardan Herhangi Biri %20-30 Olanlar</option>
+                <option value="darkred">🔴 Yıldızlardan Herhangi Biri %10-20 Olanlar</option>
+                <option value="lightred">⭕ İçinde Zarar / Kötü Olanlar</option>
+            </select>
         </div>
 
         <div class="hbt-cards-container" id="cardsContainer">
             <?php foreach ( $simulation_results as $row ) : 
-                // Filtreleme için mevcut kartın tüm renklerini veri niteliklerine (data attributes) yazıyoruz
-                $c_m  = $row['mevcut'] ? $row['mevcut']['color'] : '';
-                $c_y1 = $row['y1'] ? $row['y1']['color'] : '';
-                $c_y2 = $row['y2'] ? $row['y2']['color'] : '';
-                $c_y3 = $row['y3'] ? $row['y3']['color'] : '';
+                // Filtreleme için SADECE 1-2-3 yıldızın renklerini çekiyoruz. Mevcut satış filtreye girmiyor.
+                $c_y1 = isset($row['y1']['color']) ? $row['y1']['color'] : '';
+                $c_y2 = isset($row['y2']['color']) ? $row['y2']['color'] : '';
+                $c_y3 = isset($row['y3']['color']) ? $row['y3']['color'] : '';
             ?>
                 <div class="hbt-card" 
                      data-search="<?php echo esc_attr( strtolower( strip_tags($row['isim']) . ' ' . $row['barkod'] ) ); ?>"
-                    data-colors="<?php echo esc_attr($c_y1 . ' ' . $c_y2 . ' ' . $c_y3); ?>">
+                     data-colors="<?php echo esc_attr($c_y1 . ' ' . $c_y2 . ' ' . $c_y3); ?>">
                     
                     <div class="hbt-card-header">
                         <h3><?php echo wp_kses_post( $row['isim'] ); ?></h3>
@@ -441,8 +475,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
                             if (marginVal === 'yellow' && !cardColors.includes('blink-yellow')) matchMargin = false;
                             if (marginVal === 'darkred' && !cardColors.includes('blink-dark-red')) matchMargin = false;
                             
-                            // Light Red (Kötü) için kural: Eğer yeşil, sarı veya koyu kırmızı YOKSA kötüdür.
-                            if (marginVal === 'lightred' && (cardColors.includes('blink-green') || cardColors.includes('blink-yellow') || cardColors.includes('blink-dark-red'))) {
+                            // YENİ: İçinde Zarar / Kötü Olanlar (En az biri kırmızı yanıyorsa göster)
+                            if (marginVal === 'lightred' && !cardColors.includes('blink-light-red')) {
                                 matchMargin = false;
                             }
                         }
@@ -460,4 +494,77 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_FILES['yildiz_excel'], $_
             });
         </script>
     <?php endif; ?>
+
+    <div class="hbt-card" style="margin-top:40px; border-top: 3px solid #f57f17;">
+        <div class="hbt-card-header"><h3>🗄️ Geçmiş Hesaplama Arşivi</h3></div>
+        <div style="padding:15px; overflow-x:auto;">
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th style="font-weight:bold; width: 15%;">Tarih</th>
+                        <th style="font-weight:bold; width: 20%;">Mağaza</th>
+                        <th style="font-weight:bold; width: 15%;">Toplam Ürün</th>
+                        <th style="font-weight:bold; color:#2e7d32;">⭐ 1Y Yeşil</th>
+                        <th style="font-weight:bold; color:#2e7d32;">⭐⭐ 2Y Yeşil</th>
+                        <th style="font-weight:bold; color:#2e7d32;">⭐⭐⭐ 3Y Yeşil</th>
+                        <th style="font-weight:bold; text-align:right;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $per_page = 10;
+                    $current_p = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+                    $offset = ($current_p - 1) * $per_page;
+                    
+                    // Tablonun olup olmadığını kontrol et (Eklenti deaktif/aktif edilmediyse hata vermesin diye)
+                    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}hbt_avantajli_arsiv'") == $wpdb->prefix . 'hbt_avantajli_arsiv';
+                    
+                    if ($table_exists) {
+                        $total_rows = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hbt_avantajli_arsiv");
+                        if ($total_rows > 0) {
+                            $arsiv_logs = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}hbt_avantajli_arsiv ORDER BY kayit_tarihi DESC LIMIT %d OFFSET %d", $per_page, $offset));
+                            foreach ($arsiv_logs as $log) :
+                                $m_adi = $wpdb->get_var($wpdb->prepare("SELECT store_name FROM {$wpdb->prefix}hbt_stores WHERE id = %d", $log->maza_id));
+                    ?>
+                        <tr>
+                            <td><b><?php echo date('d.m.Y H:i', strtotime($log->kayit_tarihi)); ?></b></td>
+                            <td><?php echo esc_html($m_adi); ?></td>
+                            <td><?php echo $log->toplam_urun; ?> Ürün</td>
+                            <td><span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:600;"><?php echo $log->yildiz1_yesil; ?></span></td>
+                            <td><span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:600;"><?php echo $log->yildiz2_yesil; ?></span></td>
+                            <td><span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:600;"><?php echo $log->yildiz3_yesil; ?></span></td>
+                            <td style="text-align:right;">
+                                <a href="<?php echo admin_url('admin.php?page=hbt-tpt-avantajli-etiketler&view_archive=' . $log->id); ?>" class="button button-small" style="background:#fff; border-color:#2271b1; color:#2271b1;">Detayları Yükle</a>
+                            </td>
+                        </tr>
+                    <?php 
+                            endforeach; 
+                        } else {
+                            echo '<tr><td colspan="7">Henüz kaydedilmiş bir simülasyon bulunamadı.</td></tr>';
+                        }
+                    } else {
+                        echo '<tr><td colspan="7">Tablo henüz oluşturulmadı. Lütfen eklentiyi deaktif edip tekrar aktif edin.</td></tr>';
+                    }
+                    ?>
+                </tbody>
+            </table>
+            
+            <?php if (isset($total_rows) && $total_rows > $per_page): ?>
+            <div class="tablenav bottom">
+                <div class="tablenav-pages">
+                    <?php
+                    echo paginate_links( array(
+                        'base'    => add_query_arg( 'paged', '%#%' ),
+                        'format'  => '',
+                        'prev_text' => '&laquo;',
+                        'next_text' => '&raquo;',
+                        'total'   => ceil($total_rows / $per_page),
+                        'current' => $current_p
+                    ) );
+                    ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>

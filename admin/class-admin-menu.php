@@ -625,6 +625,15 @@ public function render_avantajli_etiketler(): void {
 			wp_send_json_error( array( 'message' => __( 'Sipariş bulunamadı.', 'hbt-trendyol-profit-tracker' ) ) );
 		}
 		$items = HBT_Database::instance()->get_order_items( $order_id );
+
+		// --- YENİ EKLENEN KISIM BAŞLANGICI ---
+		// Her bir sipariş kalemi için ürün maliyetleri tablosundan görseli (image_url) çekiyoruz
+		foreach ( $items as &$item ) {
+			$product_cost = HBT_Database::instance()->get_product_cost_by_barcode( (int) $order->store_id, (string) $item->barcode );
+			$item->image_url = ( $product_cost && ! empty( $product_cost->image_url ) ) ? $product_cost->image_url : '';
+		}
+		// --- YENİ EKLENEN KISIM BİTİŞİ ---
+
 		wp_send_json_success( array( 'order' => $order, 'items' => $items ) );
 	}
 
