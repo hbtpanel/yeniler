@@ -141,6 +141,16 @@ defined( 'ABSPATH' ) || exit;
         </div>
     </div>
 
+    <div class="hbt-card" style="margin-bottom: 24px; background: #f8fafc; border: 1px solid #e2e8f0;">
+		<h3 class="hbt-widget-title" style="margin-top: 0; display: flex; align-items: center; gap: 8px; border-bottom: none; padding-bottom: 0;">
+			<span class="dashicons dashicons-awards" style="color: #F59E0B; font-size: 24px; width: 24px; height: 24px;"></span> Günün En Çok Ciro Getiren 10 Ürünü
+		</h3>
+		
+		<div id="hbt-top-products-container" style="display: flex; gap: 16px; overflow-x: auto; padding: 16px 4px 10px 4px; scroll-behavior: smooth;">
+			<p style="color: var(--hbt-text-muted); font-size: 13px;">Günün şampiyonları hesaplanıyor...</p>
+		</div>
+	</div>
+
     <div class="hbt-dashboard-row">
         <div class="hbt-col-8">
             <h3 class="hbt-widget-title"><span class="dashicons dashicons-chart-area"></span> Son 30 Günlük Ciro, Kâr ve Marj Trendi</h3>

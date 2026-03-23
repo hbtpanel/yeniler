@@ -1778,4 +1778,34 @@ class HBT_Database {
 			PRIMARY KEY (id)
 		) $charset_collate;";
 	}
+	/**
+	 * Günün en çok ciro getiren 10 ürününü getirir.
+	 */
+	public function get_top_products_today( $limit = 10 ) {
+		global $wpdb;
+		$orders_table = $wpdb->prefix . 'hbt_orders';
+		$items_table  = $wpdb->prefix . 'hbt_order_items';
+		$costs_table  = $wpdb->prefix . 'hbt_product_costs';
+		
+		// WordPress'in yerel saatine göre bugünün tarihini al
+		$today = current_time( 'Y-m-d' );
+
+		$sql = $wpdb->prepare( "
+			SELECT 
+				i.barcode,
+				MAX(i.product_name) as product_name,
+				SUM(i.quantity) as total_quantity,
+				SUM(i.line_total) as total_revenue,
+				(SELECT image_url FROM {$costs_table} c WHERE c.barcode = i.barcode LIMIT 1) as image_url
+			FROM {$items_table} i
+			JOIN {$orders_table} o ON i.order_id = o.id
+			WHERE DATE(o.order_date) = %s
+			  AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+			GROUP BY i.barcode
+			ORDER BY total_revenue DESC
+			LIMIT %d
+		", $today, $limit );
+
+		return $wpdb->get_results( $sql );
+	}
 }

@@ -1155,7 +1155,7 @@ public function ajax_bulk_import_costs(): void {
             'revenue_last_month_upto_now' => $stats_last_month_upto_now['revenue'],
 
         
-            // Grafikler ve Listeler
+           // Grafikler ve Listeler
             'trend'             => $db->get_revenue_trend( 30 ),
             'expense_breakdown' => $db->get_dashboard_expense_breakdown( 30 ),
             'return_loss_stats' => $db->get_return_loss_stats( 30 ),
@@ -1163,16 +1163,20 @@ public function ajax_bulk_import_costs(): void {
             'worst_products'    => $db->get_worst_profitable_products( 30, 5 ),
             'smart_alerts'      => $db->get_smart_alerts(),
             'profit_goal'       => $profit_goal,
+            'top_products_today'=> $db->get_top_products_today( 10 ),
             
             // Mağaza Bazlı Veriler
             'stores_today'      => $stores_today ?: array(),
             'stores_yesterday'  => $stores_yesterday ?: array(),
             'store_comparison'  => $store_comparison ?: array(),
+
+			'top_products_today' => HBT_Database::instance()->get_top_products_today( 10 ),
             
             // Mağaza Tablosu Yüzdelikleri İçin
             'stores_yesterday_upto_now' => $stores_yesterday_upto_now ?: array(),
             'stores_2days_ago'          => $stores_2days_ago ?: array(),
             'stores_prev_30days'        => $stores_prev_30days ?: array()
+			
 			
         ) );
     }
