@@ -824,6 +824,8 @@
 		});
 	});
 
+	
+
 	// =========================================================================
 	// Orders – details, recalc
 	// =========================================================================
@@ -836,14 +838,15 @@
 
 		hbtAjax('hbt_get_order_details', { order_id: id }, function (data) {
 			var o = data.order;
+			
 			var html = '<table class="wp-list-table widefat fixed striped"><thead><tr>' +
-				'<th>Ürün</th><th>Barkod</th><th>Adet</th>' +
-'<th>Satış (TL)</th><th>Maliyet (TL)</th><th>Komisyon (TL)</th><th>Komisyon (%)</th><th>Kargo</th><th>Sabit Gider</th><th>Net Kâr</th><th>Marj%</th>' +				'</tr></thead><tbody>';
+				'<th style="width: 110px; text-align: center;">Görsel</th><th>Ürün</th><th>Adet</th>' +
+				'<th>Satış (TL)</th><th>Maliyet (TL)</th><th>Komisyon (TL)</th><th>Komisyon (%)</th><th>Kargo</th><th>Sabit Gider</th><th>Net Kâr</th><th>Marj%</th>' +				
+				'</tr></thead><tbody>';
 
 			(data.items || []).forEach(function (item) {
 				var cls = parseFloat(item.net_profit) >= 0 ? 'profit-positive' : 'profit-negative';
 
-				// compute commission rate fallback if missing
 				var line_total = parseFloat(item.line_total || 0);
 				var commission_amount = parseFloat(item.commission_amount || 0);
 				var commission_rate = null;
@@ -853,22 +856,52 @@
 					commission_rate = (commission_amount / line_total) * 100;
 				}
 
+				// GÖRSEL: 96x96 Büyük Boyut
+				var imgHtml = '';
+				if (item.image_url) {
+imgHtml = '<img src="' + item.image_url + '" class="hbt-zoomable-image" style="width: 96px; height: 96px; object-fit: contain; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; display: block; margin: 0 auto; cursor: zoom-in;" alt="Ürün" title="Büyütmek için tıklayın" />';				} else {
+					imgHtml = '<div style="width: 96px; height: 96px; background: #f1f5f9; border-radius: 6px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; margin: 0 auto;"><span class="dashicons dashicons-format-image" style="color: #94a3b8; font-size: 32px; width: 32px; height: 32px;"></span></div>';
+				}
+
+				// ÜRÜN ADI TEMİZLİĞİ VE LİMİTLEME
+				var rawName = item.product_name || '';
+				if (item.barcode && rawName.indexOf(item.barcode) !== -1) {
+					rawName = rawName.replace(item.barcode, '');
+				}
+				if (item.sku && rawName.indexOf(item.sku) !== -1) {
+					rawName = rawName.replace(item.sku, '');
+				}
+				
+				// Model kodu temizlendikten sonraki en saf isim
+				var cleanName = rawName.replace(/[\s\-()]+$/, '').trim();
+				
+				// Yüzen kutuda çıkacak metin (Maks 100 karakter)
+				var tooltipName = cleanName.length > 100 ? cleanName.substring(0, 100) + '...' : cleanName;
+				
+				// Tabloda görünecek kısa metin (Maks 20 karakter)
+				var shortName = cleanName.length > 20 ? cleanName.substring(0, 20) + '...' : cleanName;
+				var tooltipNameEscaped = tooltipName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+				// GÜNCELLEME: Mavi renk ve alt çizgi kaldırıldı, normal metin rengi verildi
+				var productNameHtml = cleanName.length > 20 
+					? '<span class="hbt-product-name-toggle" data-full="' + tooltipNameEscaped + '" style="cursor: pointer; font-weight: 500; color: var(--hbt-text-main);" title="Tamamını okumak için tıklayın">' + shortName + '</span>'
+					: '<span style="font-weight: 500; color: var(--hbt-text-main);">' + cleanName + '</span>';
+
 				html += '<tr class="' + cls + '">' +
-					'<td>' + $('<span>').text(item.product_name).html() + '</td>' +
-					'<td>' + $('<span>').text(item.barcode).html() + '</td>' +
-					'<td>' + item.quantity + '</td>' +
-					'<td>' + fmt(line_total) + '</td>' +
-					'<td>' + fmt(item.total_cost_tl) + '</td>' +
-					'<td>' + fmt(commission_amount) + '</td>' +
-					'<td>' + (commission_rate !== null ? parseFloat(commission_rate).toFixed(2) + '%' : '-') + '</td>' +
-					'<td>' + fmt(item.shipping_cost) + '</td>' +
-					'<td>' + fmt(item.other_expenses || 0) + '</td>' +
-					'<td>' + fmt(item.net_profit) + '</td>' +
-					'<td>' + parseFloat(item.profit_margin || 0).toFixed(2) + '%</td>' +
+					'<td style="text-align: center; vertical-align: middle; padding: 6px;">' + imgHtml + '</td>' +
+					'<td style="vertical-align: middle;">' + productNameHtml + '</td>' +
+					'<td style="vertical-align: middle;">' + item.quantity + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(line_total) + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(item.total_cost_tl) + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(commission_amount) + '</td>' +
+					'<td style="vertical-align: middle;">' + (commission_rate !== null ? parseFloat(commission_rate).toFixed(2) + '%' : '-') + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(item.shipping_cost) + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(item.other_expenses || 0) + '</td>' +
+					'<td style="vertical-align: middle;">' + fmt(item.net_profit) + '</td>' +
+					'<td style="vertical-align: middle;">' + parseFloat(item.profit_margin || 0).toFixed(2) + '%</td>' +
 					'</tr>';
 			});
 
-			// YENİ EKLENEN: Toplam sabit gideri hesapla
 			var total_fixed = (data.items || []).reduce(function(sum, it) { return sum + parseFloat(it.other_expenses || 0); }, 0);
 
 			html += '</tbody><tfoot><tr>' +
@@ -878,7 +911,7 @@
 				'<td>' + fmt(o.total_commission) + '</td>' +
 				'<td>' + ( (typeof o.total_commission !== 'undefined' && o.total_commission > 0 && o.total_price > 0) ? ( (o.total_commission / o.total_price * 100).toFixed(2) + '%' ) : '-' ) + '</td>' +
 				'<td>' + fmt(o.total_shipping) + '</td>' +
-				'<td>' + fmt(total_fixed) + '</td>' + // YENİ EKLENEN
+				'<td>' + fmt(total_fixed) + '</td>' + 
 				'<td>' + fmt(o.net_profit) + '</td>' +
 				'<td>' + parseFloat(o.profit_margin || 0).toFixed(2) + '%</td>' +
 				'</tr></tfoot></table>';
@@ -1228,5 +1261,91 @@ jQuery(document).ready(function($) {
 				}
 			}, 800);
 		}
+	});
+
+	// =========================================================================
+	// Sipariş Detayı: Ürün Adı Gösterimi (Tabloyu Bozmayan Yüzen Kutu)
+	// =========================================================================
+	$(document).on('click', '.hbt-product-name-toggle', function(e) {
+		e.stopPropagation(); // Tıklamanın body'ye ulaşıp kutuyu anında kapatmasını engeller
+		$('.hbt-floating-tooltip').remove(); // Ekranda önceden açık kalan varsa temizle
+
+		var fullText = $(this).data('full');
+
+		// Yeni yüzen kutuyu oluştur
+		var $tooltip = $('<div class="hbt-floating-tooltip"></div>').text(fullText);
+
+		// Tabloyu etkilememesi için "absolute" (bağımsız) konumlandırma ve şık CSS veriyoruz
+		$tooltip.css({
+			position: 'absolute',
+			top: e.pageY + 15 + 'px',   // Tıklanan yerin biraz aşağısı
+			left: e.pageX + 10 + 'px',  // Tıklanan yerin biraz sağı
+			background: '#1e293b',      // Şık koyu lacivert/gri arkaplan
+			color: '#ffffff',
+			padding: '10px 14px',
+			borderRadius: '6px',
+			boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+			zIndex: 9999999,            // Modalın da en üstünde görünsün
+			maxWidth: '300px',
+			fontSize: '13px',
+			lineHeight: '1.5',
+			pointerEvents: 'none'       // Tıklamaları engellememesi için
+		});
+
+		// Kutuyu sayfaya ekle
+		$('body').append($tooltip);
+
+		// 3.5 saniye sonra yavaşça silinerek kaybolsun
+		setTimeout(function() {
+			$tooltip.fadeOut(300, function() { $(this).remove(); });
+		}, 3500);
+	});
+
+	// Kullanıcı ekranda başka herhangi bir boşluğa tıklarsa kutuyu anında kapat
+	$(document).on('click', function() {
+		$('.hbt-floating-tooltip').fadeOut(200, function() { $(this).remove(); });
+	});
+	// =========================================================================
+	// Resim Büyütme (Lightbox) Özelliği
+	// =========================================================================
+	$(document).on('click', '.hbt-zoomable-image', function(e) {
+		e.stopPropagation();
+		var src = $(this).attr('src');
+		if (!src) return;
+
+		// Karanlık arkaplan (overlay) - Şık koyu lacivert transparan
+		var $overlay = $('<div class="hbt-lightbox-overlay"></div>').css({
+			position: 'fixed',
+			top: 0,
+			left: 0,
+			width: '100%',
+			height: '100%',
+			backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+			zIndex: 99999999, // Tüm modalların ve menülerin üstünde
+			display: 'flex',
+			alignItems: 'center',
+			justifyContent: 'center',
+			cursor: 'zoom-out' // Üzerine gelince "küçült" ikonu
+		});
+
+		// Büyük resim
+		var $img = $('<img>').attr('src', src).css({
+			maxWidth: '90%',
+			maxHeight: '90%',
+			borderRadius: '8px',
+			boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+			objectFit: 'contain'
+		});
+
+		$overlay.append($img);
+		$('body').append($overlay);
+
+		// Yumuşak geçişle (fade) ekranda belirsin
+		$overlay.hide().fadeIn(250);
+
+		// Ekranda herhangi bir yere tıklanınca resmi kapat ve temizle
+		$overlay.on('click', function() {
+			$(this).fadeOut(200, function() { $(this).remove(); });
+		});
 	});
 }(jQuery));

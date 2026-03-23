@@ -98,6 +98,8 @@ class HBT_Database {
 			$this->get_notifications_schema( $prefix, $charset_collate ),
 			$this->get_ad_expenses_schema( $prefix, $charset_collate ),
 			$this->get_sync_logs_schema( $prefix, $charset_collate ),
+			$this->get_avantajli_arsiv_schema( $prefix, $charset_collate ),
+			$this->get_plus_simulator_arsiv_schema( $prefix, $charset_collate ),
 		);
 
 		foreach ( $tables as $sql ) {
@@ -1749,4 +1751,31 @@ class HBT_Database {
             $start_date
         ), ARRAY_A );
     }
+
+	/** @return string */
+	private function get_avantajli_arsiv_schema( string $prefix, string $charset_collate ): string {
+		return "CREATE TABLE {$prefix}hbt_avantajli_arsiv (
+			id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			maza_id INT(11) NOT NULL,
+			kayit_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+			toplam_urun INT(11) DEFAULT 0,
+			yildiz1_yesil INT(11) DEFAULT 0,
+			yildiz2_yesil INT(11) DEFAULT 0,
+			yildiz3_yesil INT(11) DEFAULT 0,
+			detay_verisi LONGTEXT NOT NULL,
+			PRIMARY KEY (id)
+		) $charset_collate;";
+	}
+	/** @return string */
+	private function get_plus_simulator_arsiv_schema( string $prefix, string $charset_collate ): string {
+		return "CREATE TABLE {$prefix}hbt_plus_simulator_arsiv (
+			id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			maza_id INT(11) NOT NULL,
+			kayit_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+			toplam_urun INT(11) DEFAULT 0,
+			plus_yesil INT(11) DEFAULT 0,
+			detay_verisi LONGTEXT NOT NULL,
+			PRIMARY KEY (id)
+		) $charset_collate;";
+	}
 }

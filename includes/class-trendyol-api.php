@@ -17,10 +17,13 @@ class HBT_Trendyol_API {
 
 	/**
 	 * Trendyol API base URL.
-	 *
-	 * @var string
 	 */
 	private const BASE_URL = 'https://api.trendyol.com/sapigw/';
+
+	/**
+	 * Trendyol Ürünler API yeni sunucu adresi.
+	 */
+	private const PRODUCT_API_URL = 'https://apigw.trendyol.com/';
 
 	/**
 	 * Store object.
@@ -153,15 +156,24 @@ class HBT_Trendyol_API {
 	}
 	/**
 	 * Get all products for the supplier.
-	 *
-	 * @param  int $page Page number.
-	 * @param  int $size Page size.
-	 * @return array|WP_Error
 	 */
-	public function get_products( int $page = 0, int $size = 200 ) {
-		$params   = array( 'page' => $page, 'size' => $size );
-		$endpoint = "suppliers/{$this->supplier_id}/products?" . http_build_query( $params );
-		$response = $this->make_request( $endpoint );
+	public function get_products( int $page = 0, int $size = 50 ) {
+		$params = array( 
+			'page'     => $page, 
+			'size'     => $size,
+			'approved' => 'true' 
+		);
+		
+		// DİKKAT: Burada BASE_URL yerine yeni PRODUCT_API_URL kullanıyoruz
+		$endpoint = "integration/product/sellers/{$this->supplier_id}/products?" . http_build_query( $params );
+		
+		// make_request fonksiyonunda URL birleştirme kısmını bypass etmek için tam URL gönderiyoruz
+		$full_url = self::PRODUCT_API_URL . $endpoint;
+		
+		// make_request'i güncellemediğimiz için bu fonksiyonu küçük bir hile ile tam URL ile çağırmalıyız.
+		// Bu yüzden aşağıda paylaştığım güncel get_products yapısını kullanın:
+		
+		$response = $this->make_request_v2( $full_url ); // Yeni bir yardımcı metod
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -172,8 +184,8 @@ class HBT_Trendyol_API {
 
 		for ( $p = 1; $p < $total_pages; $p++ ) {
 			$params['page'] = $p;
-			$endpoint       = "suppliers/{$this->supplier_id}/products?" . http_build_query( $params );
-			$page_response  = $this->make_request( $endpoint );
+			$next_url       = self::PRODUCT_API_URL . "integration/product/sellers/{$this->supplier_id}/products?" . http_build_query( $params );
+			$page_response  = $this->make_request_v2( $next_url );
 
 			if ( is_wp_error( $page_response ) ) {
 				break;
@@ -184,7 +196,22 @@ class HBT_Trendyol_API {
 
 		return $this->normalize_products( (array) $all_products );
 	}
+	/**
+	 * Ürünler için özel istek metodu (Mevcut make_request'i bozmamak için)
+	 */
+	private function make_request_v2( string $full_url ) {
+		$args = array(
+			'timeout' => 30,
+			'headers' => array(
+				'Authorization' => 'Basic ' . $this->credentials,
+				'User-Agent'    => $this->supplier_id . ' - SelfIntegration',
+				'Content-Type'  => 'application/json',
+			),
+		);
 
+		$response = wp_remote_get( $full_url, $args );
+		return $this->handle_api_error( $response );
+	}
 	/**
 	 * Get financial transactions (otherfinancials).
 	 *
@@ -283,94 +310,88 @@ class HBT_Trendyol_API {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Make an API GET request with retry/backoff logic.
-	 *
-	 * Implements:
-	 *  - up to $max_attempts attempts for transient errors (5xx, 429)
-	 *  - uses Retry-After header (if present) for 429
-	 *  - exponential backoff with small sleeps between attempts
-	 *
-	 * @param  string $endpoint API endpoint (relative).
-	 * @param  array  $params   Additional query params (unused here, kept for future POST).
-	 * @return array|WP_Error   Parsed JSON array or WP_Error.
+	 * Make an API GET request with advanced cURL Cloudflare Bypass.
 	 */
 	public function make_request( string $endpoint, array $params = array() ) {
+		$supplier_id = trim($this->supplier_id);
+		if ( empty( $supplier_id ) ) {
+			return new WP_Error( 'missing_id', "HATA: Mağazanın Satıcı ID bilgisi boş!" );
+		}
+
 		$url = self::BASE_URL . $endpoint;
+		$user_agent = $supplier_id . ' - SelfIntegration';
 
 		$max_attempts = 3;
 		$attempt = 0;
-		$last_wp_error = null;
 
 		while ( $attempt < $max_attempts ) {
 			$attempt++;
 
-			$args = array(
-				'timeout' => 30,
-				'headers' => array(
-					'Authorization' => 'Basic ' . $this->credentials,
-					'User-Agent'    => $this->supplier_id . ' - SelfIntegration',
-					'Content-Type'  => 'application/json',
-				),
-			);
+			if ( function_exists( 'curl_init' ) ) {
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $url);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_TIMEOUT, 45); 
+				
+				// Cloudflare Bypass Sinyalleri
+				curl_setopt($ch, CURLOPT_ENCODING, ''); 
+				curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
+				curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+				curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
 
-			$response = wp_remote_get( $url, $args );
+				curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+					'Authorization: Basic ' . $this->credentials,
+					'Content-Type: application/json',
+					'Accept: application/json, text/plain, */*',
+					'Cache-Control: no-cache',
+					'Connection: keep-alive'
+				));
 
-			if ( is_wp_error( $response ) ) {
-				$last_wp_error = $response;
-				// Short exponential backoff (microseconds) before retrying, but keep low to avoid long cron blocking.
-				if ( $attempt < $max_attempts ) {
-					usleep( (int) ( 250000 * pow( 2, $attempt - 1 ) ) ); // 250ms, 500ms, 1s
-					continue;
-				}
-				return $response;
-			}
+				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
-			$status_code = wp_remote_retrieve_response_code( $response );
+				$body = curl_exec($ch);
+				$status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+				$curl_error = curl_error($ch);
+				curl_close($ch);
 
-			// Success
-			if ( $status_code >= 200 && $status_code < 300 ) {
-				return $this->handle_api_error( $response );
-			}
-
-			// Rate limited - use Retry-After if provided.
-			if ( 429 === $status_code ) {
-				$retry_after = wp_remote_retrieve_header( $response, 'retry-after' );
-				$wait_seconds = 1;
-				if ( $retry_after !== null && is_numeric( $retry_after ) ) {
-					$wait_seconds = max( 1, intval( $retry_after ) );
-				} else {
-					$wait_seconds = (int) max( 1, pow( 2, $attempt - 1 ) );
+				if ($body === false) {
+					if ( $attempt < $max_attempts ) { usleep( 250000 ); continue; }
+					return new WP_Error( 'curl_error', 'Bağlantı hatası: ' . $curl_error );
 				}
 
-				if ( $attempt < $max_attempts ) {
-					sleep( $wait_seconds );
-					continue;
+				if ( $status_code >= 200 && $status_code < 300 ) {
+					$parsed = json_decode( $body, true );
+					if ( json_last_error() === JSON_ERROR_NONE ) {
+						return $parsed;
+					}
+					return new WP_Error( 'json_parse_error', 'Gelen veri bozuk JSON formatında.' );
 				}
 
-				// Final attempt - return error processing
-				return $this->handle_api_error( $response );
-			}
-
-			// Server errors (5xx) - retry with small backoff.
-			if ( $status_code >= 500 && $status_code < 600 ) {
-				if ( $attempt < $max_attempts ) {
-					usleep( (int) ( 250000 * pow( 2, $attempt - 1 ) ) ); // 250ms..1s
-					continue;
+				if ( $status_code === 403 || $status_code === 401 ) {
+					return new WP_Error( 'api_error', "CLOUDFLARE YAKALADI! Kod: $status_code | Yanıt: " . substr($body, 0, 150) );
 				}
-				return $this->handle_api_error( $response );
-			}
 
-			// Other client errors (4xx except 429) - do not retry
-			return $this->handle_api_error( $response );
+				if ( 429 === $status_code ) {
+					if ( $attempt < $max_attempts ) { sleep( 1 ); continue; }
+					return new WP_Error( 'api_error', 'Trendyol: Çok fazla istek (429).' );
+				}
+
+				if ( $status_code >= 500 && $status_code < 600 ) {
+					if ( $attempt < $max_attempts ) { usleep( 250000 ); continue; }
+					return new WP_Error( 'api_error', 'Trendyol sunucu hatası (5xx).' );
+				}
+
+				return new WP_Error( 'api_error', 'API Hata Kodu: ' . $status_code );
+
+			} else {
+				return new WP_Error('curl_missing', 'cURL sunucunuzda aktif değil.');
+			}
 		}
 
-		// If we reach here, return last WP_Error if any
-		if ( $last_wp_error instanceof WP_Error ) {
-			return $last_wp_error;
-		}
-
-		return new WP_Error( 'api_error', __( 'Unknown API error', 'hbt-trendyol-profit-tracker' ) );
+		return new WP_Error( 'api_error', 'Bilinmeyen API Hatası' );
 	}
+		
 
 	/**
 	 * Handle API response errors with cleaner messages.
