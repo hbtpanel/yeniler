@@ -177,7 +177,7 @@ class HBT_Admin_Menu {
 			'hbt-tpt-admin',
 			HBT_TPT_PLUGIN_URL . 'admin/js/admin-script.js',
 			array( 'jquery', 'jquery-ui-datepicker', 'chartjs', 'datatables-js' ),
-			HBT_TPT_VERSION,
+			time(), // <-- CACHE KIRICI: Tarayıcının her zaman en yeni JS dosyasını çekmesini sağlar
 			true
 		);
 
@@ -1163,7 +1163,8 @@ public function ajax_bulk_import_costs(): void {
             'worst_products'    => $db->get_worst_profitable_products( 30, 5 ),
             'smart_alerts'      => $db->get_smart_alerts(),
             'profit_goal'       => $profit_goal,
-            'top_products_today'=> $db->get_top_products_today( 10 ),
+          'top_products_today'=> $db->get_top_products_today( 10 ),
+            'debug_server_time' => current_time('mysql'), // Sunucu saati kontrolü
             
             // Mağaza Bazlı Veriler
             'stores_today'      => $stores_today ?: array(),

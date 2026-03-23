@@ -1779,33 +1779,43 @@ class HBT_Database {
 		) $charset_collate;";
 	}
 	/**
-	 * Günün en çok ciro getiren 10 ürününü getirir.
+	 * Günün en çok ciro getiren 10 ürününü getirir. (Hata Ayıklama / Debug Modu)
 	 */
 	public function get_top_products_today( $limit = 10 ) {
 		global $wpdb;
-		$orders_table = $wpdb->prefix . 'hbt_orders';
-		$items_table  = $wpdb->prefix . 'hbt_order_items';
-		$costs_table  = $wpdb->prefix . 'hbt_product_costs';
+		// Geçici olarak SQL hatalarını ekrana basmasına izin veriyoruz
+		$wpdb->show_errors(); 
 		
-		// WordPress'in yerel saatine göre bugünün tarihini al
-		$today = current_time( 'Y-m-d' );
+		$tz = new DateTimeZone('Europe/Istanbul');
+		$dt = new DateTime('now', $tz);
+		$today_start = $dt->format('Y-m-d') . ' 00:00:00';
+		$today_end   = $dt->format('Y-m-d') . ' 23:59:59';
 
-		$sql = $wpdb->prepare( "
-			SELECT 
-				i.barcode,
-				MAX(i.product_name) as product_name,
-				SUM(i.quantity) as total_quantity,
-				SUM(i.line_total) as total_revenue,
-				(SELECT image_url FROM {$costs_table} c WHERE c.barcode = i.barcode LIMIT 1) as image_url
-			FROM {$items_table} i
-			JOIN {$orders_table} o ON i.order_id = o.id
-			WHERE DATE(o.order_date) = %s
-			  AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
-			GROUP BY i.barcode
-			ORDER BY total_revenue DESC
-			LIMIT %d
-		", $today, $limit );
+		$sql = $wpdb->prepare(
+			"SELECT oi.barcode, oi.product_name, SUM(oi.quantity) as total_quantity, SUM(oi.line_total) as total_revenue
+			 FROM {$wpdb->prefix}hbt_order_items oi
+			 INNER JOIN {$wpdb->prefix}hbt_orders o ON o.id = oi.order_id
+			 WHERE o.order_date >= %s AND o.order_date <= %s
+			 AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+			 GROUP BY oi.barcode ORDER BY total_revenue DESC LIMIT %d",
+			$today_start, $today_end, $limit
+		);
 
-		return $wpdb->get_results( $sql );
+		$results = $wpdb->get_results( $sql, ARRAY_A );
+		
+		// Eğer SQL'de bir hata oluştuysa, hatayı yakalayıp sisteme gönderiyoruz
+		if ( ! empty( $wpdb->last_error ) ) {
+			return array( 'debug_sql_error' => $wpdb->last_error, 'sql_query' => $sql );
+		}
+
+		if ( ! empty( $results ) ) {
+			foreach ( $results as $key => $row ) {
+				$barcode = $row['barcode'];
+				$image_url = $wpdb->get_var( $wpdb->prepare( "SELECT image_url FROM {$wpdb->prefix}hbt_product_costs WHERE barcode = %s LIMIT 1", $barcode ) );
+				$results[$key]['image_url'] = $image_url ? $image_url : '';
+			}
+		}
+
+		return $results ?: array();
 	}
 }
