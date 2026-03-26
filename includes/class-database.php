@@ -1821,4 +1821,50 @@ class HBT_Database {
 
 		return $results ?: array();
 	}
+	/** TV Modu İçin: Bugün satılan TÜM ürünleri getirir */
+	public function get_all_products_today() {
+		global $wpdb;
+		$tz = new DateTimeZone('Europe/Istanbul');
+		$dt = new DateTime('now', $tz);
+		$today_start = $dt->format('Y-m-d') . ' 00:00:00';
+		$today_end   = $dt->format('Y-m-d') . ' 23:59:59';
+
+		$sql = $wpdb->prepare(
+			"SELECT oi.barcode, oi.product_name, SUM(oi.quantity) as total_quantity, SUM(oi.line_total) as total_revenue
+			 FROM {$wpdb->prefix}hbt_order_items oi
+			 INNER JOIN {$wpdb->prefix}hbt_orders o ON o.id = oi.order_id
+			 WHERE o.order_date >= %s AND o.order_date <= %s
+			 AND o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+			 GROUP BY oi.barcode ORDER BY total_revenue DESC LIMIT 999",
+			$today_start, $today_end
+		);
+
+		$results = $wpdb->get_results( $sql, ARRAY_A );
+		
+		if ( ! empty( $results ) ) {
+			foreach ( $results as $key => $row ) {
+				$barcode = $row['barcode'];
+				$image_url = $wpdb->get_var( $wpdb->prepare( "SELECT image_url FROM {$wpdb->prefix}hbt_product_costs WHERE barcode = %s LIMIT 1", $barcode ) );
+				$results[$key]['image_url'] = $image_url ? $image_url : '';
+			}
+		}
+		return $results ?: array();
+	}
+
+	/** TV Modu İçin: Kayan yazı bandında gösterilecek son 20 siparişi getirir */
+	public function get_latest_orders_for_tv( $limit = 20 ) {
+		global $wpdb;
+		$tz = new DateTimeZone('Europe/Istanbul');
+		$dt = new DateTime('now', $tz);
+		$today_start = $dt->format('Y-m-d') . ' 00:00:00';
+		
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT id, customer_name, shipping_city, total_price, order_date
+			 FROM {$wpdb->prefix}hbt_orders
+			 WHERE order_date >= %s
+			 AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+			 ORDER BY id DESC LIMIT %d",
+			$today_start, $limit
+		), ARRAY_A ) ?: array();
+	}
 }

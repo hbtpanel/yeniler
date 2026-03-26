@@ -43,6 +43,7 @@ class HBT_Admin_Menu {
 		add_action( 'admin_head', array( $this, 'ios_app_meta_and_css' ) );
 		add_action( 'admin_footer', array( $this, 'ios_app_menu_js' ) );
 		add_action( 'wp_ajax_hbt_get_live_usd_rate', array( $this, 'ajax_get_live_usd_rate' ) );
+		add_action( 'wp_ajax_hbt_get_tv_mode_data', array( $this, 'ajax_get_tv_mode_data' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_hbt_test_connection', array( $this, 'ajax_test_connection' ) );
@@ -111,6 +112,7 @@ class HBT_Admin_Menu {
 			array( 'hbt-tpt-simulator', __( 'Kâr Simülatörü', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_simulator' ) ),
 			array( 'hbt-tpt-plus-simulator', __( 'Plus Simülatörü', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_plus_simulator' ) ), // PLUS SİMÜLATÖRÜ EKLENDİ
 			array( 'hbt-tpt-avantajli-etiketler', __( 'Avantajlı Etiketler', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_avantajli_etiketler' ) ),
+			array( 'hbt-tpt-tv-mode', __( 'TV & Animasyon', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_tv_mode' ) ),
 			array( 'hbt-tpt-reports', __( 'Raporlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_reports' ) ),
 			array( 'hbt-tpt-settings', __( 'Ayarlar', 'hbt-trendyol-profit-tracker' ), array( $this, 'render_settings' ) ),
 		
@@ -214,6 +216,49 @@ class HBT_Admin_Menu {
 	public function render_simulator(): void {
 		$this->check_cap();
 		require HBT_TPT_PLUGIN_DIR . 'admin/views/simulator.php';
+	}
+
+	/** Render TV Mode page. */
+	public function render_tv_mode(): void {
+		$this->check_cap();
+		require HBT_TPT_PLUGIN_DIR . 'admin/views/tv-mode.php';
+	}
+
+	/** AJAX: TV Modu için anlık verileri gönderir */
+	public function ajax_get_tv_mode_data(): void {
+		$this->verify_ajax();
+		$db = HBT_Database::instance();
+		
+		$tz = new DateTimeZone('Europe/Istanbul');
+		$dt = new DateTime('now', $tz);
+		$today = $dt->format('Y-m-d');
+		
+		// Hafta ve Ay başlarını bul
+		$dt_week = clone $dt;
+		$dt_week->modify('monday this week');
+		$week = $dt_week->format('Y-m-d');
+		
+		$dt_month = clone $dt;
+		$dt_month->modify('first day of this month');
+		$month = $dt_month->format('Y-m-01');
+
+		// Bugün, Bu Hafta ve Bu Ay istatistiklerini çek
+		$stats_today = $db->get_profit_stats( $today, $today );
+		$stats_week  = $db->get_profit_stats( $week, $today );
+		$stats_month = $db->get_profit_stats( $month, $today );
+		
+		$all_products = $db->get_all_products_today();
+		
+		// YENİ: Sipariş sayısını 20'den 10'a düşürdük
+		$latest_orders = $db->get_latest_orders_for_tv( 10 );
+		
+		wp_send_json_success( array(
+			'stats_today'   => $stats_today,
+			'stats_week'    => $stats_week,
+			'stats_month'   => $stats_month,
+			'all_products'  => $all_products,
+			'latest_orders' => $latest_orders
+		) );
 	}
 
 	/**
