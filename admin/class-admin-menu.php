@@ -1344,11 +1344,21 @@ public function ajax_bulk_import_costs(): void {
 				$order_no_html = '<span class="hbt-badge-zarar">ZARAR</span> ' . $order_no_html;
 			}
 
+			// --- YENİ: MAĞAZA İSMİNİ BULMA KODU ---
+			$store_name = 'Bilinmiyor';
+			if ( ! empty( $order->store_id ) ) {
+				$store = $db->get_store( (int) $order->store_id );
+				if ( $store ) {
+					$store_name = $store->store_name;
+				}
+			}
+			$store_html = '<span class="dashicons dashicons-store" style="color: var(--hbt-text-muted); margin-right: 4px; vertical-align: text-bottom;"></span> <span style="font-weight: 500; color: var(--hbt-primary);">' . esc_html( $store_name ) . '</span>';
+			// --- BİTİŞ ---
+
 			$formatted_data[] = array(
 				"DT_RowClass" => $row_class_final,
 				"DT_RowAttr"  => array(
 					"data-id" => esc_attr( (string) $order->id )
-					// "style" satırını SİLDİK ki CSS dosyamızdaki renkler özgürce çalışsın
 				),
 				$order_no_html, // Güncellenmiş sipariş numarası sütunu
 				esc_html( wp_date( 'd.m.Y H:i', strtotime( $order->order_date ) ) ),
@@ -1360,7 +1370,8 @@ public function ajax_bulk_import_costs(): void {
 				esc_html( number_format( $display_fc, 2 ) ),
 				'<strong style="color:' . ($profit >= 0 ? '#46b450' : '#d63638') . '">' . esc_html( number_format( $profit, 2 ) ) . '</strong>',
 				'<span data-bg-class="' . esc_attr( $margin_td_class ) . '"><strong>' . esc_html( number_format( $margin_val, 2 ) ) . '%</strong></span>',
-				esc_html( $status_text )
+				esc_html( $status_text ),
+				$store_html // YENİ EKLENEN MAĞAZA VERİSİ EN SON SÜTUNA EKLENDİ
 			);
 		}
 

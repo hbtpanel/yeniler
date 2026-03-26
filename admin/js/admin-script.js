@@ -1349,4 +1349,76 @@ jQuery(document).ready(function($) {
 			$(this).fadeOut(200, function() { $(this).remove(); });
 		});
 	});
+
+	// =========================================================================
+	// Kargo Fiyatları: DataTables ve Gelişmiş Filtreleme Sistemi
+	// =========================================================================
+	if ($('#hbt-shipping-table').length) {
+		
+		// Tabloyu DataTables'a çevir (Arama kutusu sağ üste gelecek şekilde)
+		var shippingTable = $('#hbt-shipping-table').DataTable({
+			language: {
+				search: "Hızlı Ara:",
+				lengthMenu: "_MENU_ kayıt göster",
+				info: "_TOTAL_ kargo kuralından _START_ - _END_ arası gösteriliyor",
+				infoEmpty: "Kayıt bulunamadı",
+				infoFiltered: "(toplam _MAX_ kural arasından filtrelendi)",
+				zeroRecords: "Eşleşen kargo fiyatı bulunamadı",
+				paginate: { first: "İlk", last: "Son", next: "Sonraki", previous: "Önceki" }
+			},
+			pageLength: 25,
+			order: [], 
+			// YENİ DOM: Üst ve Alt için özel Flexbox kapsayıcıları
+			dom: '<"hbt-dt-top"lf>rt<"hbt-dt-bottom"ip><"clear">', 
+			columnDefs: [
+				{ orderable: false, targets: -1 } // İşlemler (Düzenle/Sil) sütununun sıralanmasını kapatır
+			]
+		});
+
+		// DataTables'ın "Özel Arama" motoruna bizim dropdown filtrelerimizi bağlıyoruz
+		$.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
+			// Sadece shipping tablosu için çalışsın
+			if (settings.nTable.id !== 'hbt-shipping-table') return true;
+			
+			// O an okunan satırın gizli Data Attribute'larını al
+			var $row = $(settings.aoData[dataIndex].nTr);
+			var storeId = $row.data('store');
+			var company = $row.data('company');
+			var status  = $row.data('status');
+			var type    = $row.data('type');
+
+			// Seçili filtre değerlerini al
+			var filterStore   = $('#filter-store').val();
+			var filterCompany = $('#filter-company').val();
+			var filterStatus  = $('#filter-status').val();
+			var filterType    = $('#filter-type').val();
+
+			// Eğer filtre seçiliyse ve satırla eşleşmiyorsa GİZLE (false döndür)
+			if (filterStore && String(storeId) !== String(filterStore)) return false;
+			if (filterCompany && company !== filterCompany) return false;
+			if (filterStatus && status !== filterStatus) return false;
+			if (filterType && type !== filterType) return false;
+
+			// Her şey eşleştiyse GÖSTER
+			return true;
+		});
+
+		// Kullanıcı dropdownlardan herhangi birini değiştirdiğinde tabloyu anında süz
+		$('#filter-store, #filter-company, #filter-status, #filter-type').on('change', function() {
+			shippingTable.draw();
+		});
+
+		// Temizle Butonu
+		$('#btn-reset-filters').on('click', function() {
+			$('#filter-store').val('');
+			$('#filter-company').val('');
+			$('#filter-status').val('active'); // Varsayılan olarak aktiflere dönsün
+			$('#filter-type').val('');
+			shippingTable.search(''); // Yazılı arama kutusunu da sıfırla
+			shippingTable.draw();
+		});
+		
+		// Sayfa ilk yüklendiğinde varsayılan olarak seçili gelen (Aktif Olanlar) filtresini uygula
+		shippingTable.draw();
+	}
 }(jQuery));

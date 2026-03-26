@@ -10,6 +10,17 @@ defined( 'ABSPATH' ) || exit;
 
 $stores = HBT_Database::instance()->get_stores();
 $shipping_costs = HBT_Database::instance()->get_shipping_costs();
+
+// Kargo firmalarını filtre için tekilleştir ve sırala
+$companies = array();
+foreach ( $shipping_costs as $c ) {
+	if ( ! in_array( $c->shipping_company, $companies ) ) {
+		$companies[] = $c->shipping_company;
+	}
+}
+sort( $companies );
+
+$today = current_time( 'Y-m-d' );
 ?>
 <div class="wrap hbt-tpt-wrap">
 	
@@ -30,8 +41,54 @@ $shipping_costs = HBT_Database::instance()->get_shipping_costs();
 		<div>Trendyol sipariş tutarına veya desiye göre değişen kargo kesintilerini buradan sisteme tanımlayabilirsiniz. Fiyat aralığı girilmezse o kargo firması için sabit ücret kabul edilir.</div>
 	</div>
 
+	<div class="hbt-filters-bar" style="background: #fff; padding: 16px; border: 1px solid var(--hbt-border); border-radius: 8px; margin-bottom: 24px; display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+		
+		<div style="display: flex; flex-direction: column; gap: 6px;">
+			<label style="font-size: 13px; font-weight: 600; color: var(--hbt-text-main);">Mağaza</label>
+			<select id="filter-store" style="min-width: 180px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--hbt-border);">
+				<option value="">Tüm Mağazalar</option>
+				<?php foreach ( $stores as $s ) : ?>
+					<option value="<?php echo esc_attr( $s->id ); ?>"><?php echo esc_html( $s->store_name ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+
+		<div style="display: flex; flex-direction: column; gap: 6px;">
+			<label style="font-size: 13px; font-weight: 600; color: var(--hbt-text-main);">Kargo Firması</label>
+			<select id="filter-company" style="min-width: 180px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--hbt-border);">
+				<option value="">Tüm Firmalar</option>
+				<?php foreach ( $companies as $comp ) : ?>
+					<option value="<?php echo esc_attr( $comp ); ?>"><?php echo esc_html( $comp ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+
+		<div style="display: flex; flex-direction: column; gap: 6px;">
+			<label style="font-size: 13px; font-weight: 600; color: var(--hbt-text-main);">Geçerlilik Durumu</label>
+			<select id="filter-status" style="min-width: 180px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--hbt-border);">
+				<option value="">Tümü</option>
+				<option value="active" selected>Aktif Olanlar</option>
+				<option value="expired">Süresi Dolanlar (Eski)</option>
+				<option value="future">Gelecek Fiyatlar</option>
+			</select>
+		</div>
+
+		<div style="display: flex; flex-direction: column; gap: 6px;">
+			<label style="font-size: 13px; font-weight: 600; color: var(--hbt-text-main);">Kural Tipi</label>
+			<select id="filter-type" style="min-width: 160px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--hbt-border);">
+				<option value="">Tümü</option>
+				<option value="fixed">Sabit Ücret</option>
+				<option value="ranged">Baremli (Aralıklı)</option>
+			</select>
+		</div>
+		
+		<div style="flex-grow: 1; text-align: right;">
+			<button type="button" id="btn-reset-filters" class="button hbt-btn-outline" style="padding: 4px 12px; font-size: 13px;"><span class="dashicons dashicons-update-alt"></span> Temizle</button>
+		</div>
+	</div>
+
 	<div class="hbt-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
-		<table class="wp-list-table widefat fixed striped" style="border: none; margin: 0;">
+		<table id="hbt-shipping-table" class="wp-list-table widefat fixed striped" style="border: none; margin: 0;">
 			<thead>
 				<tr>
 					<th><?php esc_html_e( 'Mağaza', 'hbt-trendyol-profit-tracker' ); ?></th>
@@ -43,20 +100,27 @@ $shipping_costs = HBT_Database::instance()->get_shipping_costs();
 				</tr>
 			</thead>
 			<tbody>
-				<?php if ( empty( $shipping_costs ) ) : ?>
-					<tr>
-						<td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--hbt-text-muted);">
-							<span class="dashicons dashicons-car" style="font-size: 32px; width: 32px; height: 32px; margin-bottom: 10px; opacity: 0.5;"></span><br>
-							<?php esc_html_e( 'Henüz kargo fiyatı tanımlanmamış.', 'hbt-trendyol-profit-tracker' ); ?>
-						</td>
-					</tr>
-				<?php else : ?>
-					<?php foreach ( $shipping_costs as $cost ) : ?>
-						<tr>
+				<?php if ( ! empty( $shipping_costs ) ) : ?>
+					<?php foreach ( $shipping_costs as $cost ) : 
+						// PHP ile Durum Analizi
+						$status = 'active';
+						if ( $cost->effective_from > $today ) {
+							$status = 'future';
+						} elseif ( ! empty( $cost->effective_to ) && $cost->effective_to < $today ) {
+							$status = 'expired';
+						}
+						
+						// PHP ile Kural Tipi Analizi
+						$type = ( $cost->price_min !== null || $cost->price_max !== null ) ? 'ranged' : 'fixed';
+					?>
+						<tr data-store="<?php echo esc_attr( $cost->store_id ); ?>" 
+							data-company="<?php echo esc_attr( $cost->shipping_company ); ?>" 
+							data-status="<?php echo esc_attr( $status ); ?>" 
+							data-type="<?php echo esc_attr( $type ); ?>">
+							
 							<td style="font-weight: 500; color: var(--hbt-primary);">
 								<span class="dashicons dashicons-store" style="color: var(--hbt-text-muted); margin-right: 5px; font-size: 16px; width: 16px; height: 16px;"></span>
 								<?php
-								// Try to show store name if available.
 								$store = HBT_Database::instance()->get_store( (int) $cost->store_id );
 								echo esc_html( $store ? $store->store_name : (string) $cost->store_id );
 								?>
@@ -64,7 +128,7 @@ $shipping_costs = HBT_Database::instance()->get_shipping_costs();
 							<td style="font-weight: 600;"><?php echo esc_html( $cost->shipping_company ); ?></td>
 							<td style="color: var(--hbt-text-muted);">
 								<?php
-								if ( $cost->price_min !== null || $cost->price_max !== null ) {
+								if ( $type === 'ranged' ) {
 									echo esc_html( $cost->price_min !== null ? number_format( (float) $cost->price_min, 2 ) : '-' );
 									echo ' - ';
 									echo esc_html( $cost->price_max !== null ? number_format( (float) $cost->price_max, 2 ) : '-' );
@@ -81,6 +145,17 @@ $shipping_costs = HBT_Database::instance()->get_shipping_costs();
 							<td style="font-size: 12px; color: var(--hbt-text-muted);">
 								<span class="dashicons dashicons-calendar-alt" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
 								<?php echo esc_html( $cost->effective_from ) . ( $cost->effective_to ? ' &rarr; ' . esc_html( $cost->effective_to ) : ' &rarr; Sınırsız' ); ?>
+								
+								<?php 
+								// Durum Rozetleri (Badge)
+								if ( $status === 'active' ) {
+									echo '<span style="color:#10b981; font-weight:bold; background:#d1fae5; padding:2px 6px; border-radius:4px; margin-left:6px; font-size:10px;">AKTİF</span>';
+								} elseif ( $status === 'expired' ) {
+									echo '<span style="color:#ef4444; font-weight:bold; background:#fee2e2; padding:2px 6px; border-radius:4px; margin-left:6px; font-size:10px;">SÜRESİ DOLDU</span>';
+								} else {
+									echo '<span style="color:#3b82f6; font-weight:bold; background:#dbeafe; padding:2px 6px; border-radius:4px; margin-left:6px; font-size:10px;">GELECEK</span>';
+								}
+								?>
 							</td>
 							<td>
 								<div style="display: flex; gap: 6px;">
@@ -191,13 +266,69 @@ $shipping_costs = HBT_Database::instance()->get_shipping_costs();
 </div>
 
 <style>
-/* Tablo içindeki paddingleri biraz dengeleyelim */
-.hbt-wrap table.wp-list-table thead th:first-child,
-.hbt-wrap table.wp-list-table tbody td:first-child {
-    padding-left: 24px !important;
+/* Tablo İç Boşlukları (Padding) Dengesi */
+.hbt-tpt-wrap table.wp-list-table thead th:first-child,
+.hbt-tpt-wrap table.wp-list-table tbody td:first-child { padding-left: 24px !important; }
+.hbt-tpt-wrap table.wp-list-table thead th:last-child,
+.hbt-tpt-wrap table.wp-list-table tbody td:last-child { padding-right: 24px !important; }
+
+/* 1. ÜST BAR (Kayıt Göster ve Arama) - Flexbox Hizalaması */
+.hbt-dt-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px 12px 24px;
 }
-.hbt-wrap table.wp-list-table thead th:last-child,
-.hbt-wrap table.wp-list-table tbody td:last-child {
-    padding-right: 24px !important;
+
+/* 2. ALT BAR (Bilgi ve Sayfalama) - Flexbox Hizalaması */
+.hbt-dt-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid var(--hbt-border);
+}
+
+/* DataTables Varsayılan Yana Kaymalarını (Float) İptal Etme */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    float: none;
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    color: var(--hbt-text-muted);
+    font-size: 13px;
+}
+
+/* Arama Kutusu Makyajı */
+.dataTables_wrapper .dataTables_filter input {
+    border-radius: 6px;
+    border: 1px solid var(--hbt-border);
+    padding: 6px 12px;
+    margin-left: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Kayıt Göster (Dropdown) Makyajı */
+.dataTables_wrapper .dataTables_length select {
+    border-radius: 6px;
+    border: 1px solid var(--hbt-border);
+    padding: 4px 12px;
+    margin: 0 6px;
+}
+
+/* Sayfalama Butonları Makyajı */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 4px 12px !important;
+    border-radius: 6px;
+    margin: 0 2px;
+    border: 1px solid transparent !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--hbt-bg-color) !important;
+    border: 1px solid var(--hbt-border) !important;
+    font-weight: 600;
 }
 </style>

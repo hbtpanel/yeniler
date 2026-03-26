@@ -124,6 +124,7 @@ $filters = array(
                     <th>Net Kâr (TL)</th>
                     <th>Marj (%)</th>
                     <th>Durum</th>
+                    <th>Mağaza</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -137,8 +138,8 @@ $filters = array(
                     <td><strong id="foot-ship" style="color: var(--hbt-primary);">0.00</strong></td>
                     <td><strong style="color: var(--hbt-primary);">-</strong></td> 
                     <td><strong id="foot-profit" style="font-size: 14px;">0.00</strong></td>
-                    <td></td><td></td>
-                </tr>
+                   <td></td><td></td><td></td> </tr>
+                
             </tfoot>
         </table>
     </div>
@@ -419,7 +420,8 @@ jQuery(document).ready(function($) {
                 { "orderable": false }, // Sabit Gider
                 { "orderable": true },  // Net Kar
                 { "orderable": true },  // Marj
-                { "orderable": false }  // Durum
+                { "orderable": false }, // Durum  <--- VİRGÜL EKLENDİ
+                { "orderable": false }  // YENİ: Mağaza
             ],
             "columnDefs": [
                 {

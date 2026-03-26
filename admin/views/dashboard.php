@@ -619,58 +619,59 @@ jQuery(document).ready(function($) {
 
 <script>
 jQuery(document).ready(function($) {
-    // Arka planda çalışan AJAX isteği (Eski JS dosyasına güvenmiyoruz, doğrudan buradan çekiyoruz)
-    $.post(ajaxurl, {
-        action: 'hbt_get_dashboard_data',
-        nonce: typeof hbtTpt !== 'undefined' ? hbtTpt.nonce : ''
-    }, function(response) {
-        if (response.success && response.data.top_products_today) {
-            var topData = response.data.top_products_today;
-            var $container = $('#hbt-top-products-container');
+    
+    // İşlemi bir fonksiyona sardık ki hem ilk açılışta hem de her dakikada bir çağırabilelim
+    function hbtFetchTopProducts() {
+        $.post(ajaxurl, {
+            action: 'hbt_get_dashboard_data',
+            nonce: typeof hbtTpt !== 'undefined' ? hbtTpt.nonce : ''
+        }, function(response) {
+            if (response.success && response.data.top_products_today) {
+                var topData = response.data.top_products_today;
+                var $container = $('#hbt-top-products-container');
 
-            if (topData.length > 0) {
-                var topHtml = '';
-                topData.forEach(function(p) {
-                    var imgUrl = p.image_url ? p.image_url : ''; 
-                    var qty = p.total_quantity || 0;
-                    // Sayıları Türkçe formatta kuruşlu yazdırıyoruz
-                    var rev = parseFloat(p.total_revenue || 0).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺';
+                if (topData.length > 0) {
+                    var topHtml = '';
+                    topData.forEach(function(p) {
+                        var imgUrl = p.image_url ? p.image_url : ''; 
+                        var qty = p.total_quantity || 0;
+                        var rev = parseFloat(p.total_revenue || 0).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₺';
+                        
+                        var rawName = String(p.product_name || '');
+                        var bCode = String(p.barcode || '');
+                        
+                        if (bCode !== '' && rawName.indexOf(bCode) !== -1) {
+                            rawName = rawName.replace(bCode, '');
+                        }
+                        var cleanName = rawName.replace(/[\s\-()]+$/, '').trim();
+                        var shortName = cleanName.length > 30 ? cleanName.substring(0, 30) + '...' : cleanName;
+                        var nameEscaped = cleanName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+                        var imgElement = imgUrl
+                            ? '<img src="' + imgUrl + '" class="hbt-zoomable-image" style="width: 100%; height: 110px; object-fit: contain; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" title="Büyütmek için tıklayın" />'
+                            : '<div style="width: 100%; height: 110px; background: #f1f5f9; border-radius: 6px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center;"><span class="dashicons dashicons-format-image" style="color: #94a3b8; font-size: 32px; width: 32px; height: 32px;"></span></div>';
+
+                        topHtml += '<div style="min-width: 150px; max-width: 150px; background: #fff; border: 1px solid var(--hbt-border); border-radius: 8px; padding: 12px; position: relative; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s;">' +
+                            '<div style="position: absolute; top: -10px; right: -10px; background: #ef4444; color: #fff; font-size: 13px; font-weight: bold; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10;" title="Bugün Satılan Adet">' + qty + '</div>' +
+                            '<div style="margin-bottom: 10px; position: relative; background: #fff;">' + imgElement + '</div>' +
+                            '<div class="hbt-product-name-toggle" data-full="' + nameEscaped + '" style="font-size: 12px; font-weight: 500; color: var(--hbt-text-main); margin-bottom: 8px; line-height: 1.4; cursor: pointer; height: 34px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="Tamamını okumak için tıklayın">' + shortName + '</div>' +
+                            '<div style="font-size: 15px; font-weight: 700; color: #10b981;">' + rev + '</div>' +
+                        '</div>';
+                    });
                     
-                    var rawName = String(p.product_name || '');
-                    var bCode = String(p.barcode || '');
-                    
-                    // İsim temizliği (Barkodu ve sonundaki gereksiz çizgileri atıyoruz)
-                    if (bCode !== '' && rawName.indexOf(bCode) !== -1) {
-                        rawName = rawName.replace(bCode, '');
-                    }
-                    var cleanName = rawName.replace(/[\s\-()]+$/, '').trim();
-                    var shortName = cleanName.length > 30 ? cleanName.substring(0, 30) + '...' : cleanName;
-                    var nameEscaped = cleanName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-                    // Resim ve Işık kutusu (Lightbox) ayarı
-                    var imgElement = imgUrl
-                        ? '<img src="' + imgUrl + '" class="hbt-zoomable-image" style="width: 100%; height: 110px; object-fit: contain; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; cursor: zoom-in;" title="Büyütmek için tıklayın" />'
-                        : '<div style="width: 100%; height: 110px; background: #f1f5f9; border-radius: 6px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center;"><span class="dashicons dashicons-format-image" style="color: #94a3b8; font-size: 32px; width: 32px; height: 32px;"></span></div>';
-
-                    // Kartın HTML yapısı
-                    topHtml += '<div style="min-width: 150px; max-width: 150px; background: #fff; border: 1px solid var(--hbt-border); border-radius: 8px; padding: 12px; position: relative; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s;">' +
-                        // Kırmızı adet balonu
-                        '<div style="position: absolute; top: -10px; right: -10px; background: #ef4444; color: #fff; font-size: 13px; font-weight: bold; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10;" title="Bugün Satılan Adet">' + qty + '</div>' +
-                        // Görsel
-                        '<div style="margin-bottom: 10px; position: relative; background: #fff;">' + imgElement + '</div>' +
-                        // Yüzen Kutu (Tooltip) destekli Ürün Adı
-                        '<div class="hbt-product-name-toggle" data-full="' + nameEscaped + '" style="font-size: 12px; font-weight: 500; color: var(--hbt-text-main); margin-bottom: 8px; line-height: 1.4; cursor: pointer; height: 34px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="Tamamını okumak için tıklayın">' + shortName + '</div>' +
-                        // Ciro
-                        '<div style="font-size: 15px; font-weight: 700; color: #10b981;">' + rev + '</div>' +
-                    '</div>';
-                });
-                
-                // Hazırlanan vitrini ekrana bas
-                $container.html(topHtml);
-            } else {
-                $container.html('<p style="color: #64748b; font-size: 13px;">Bugün için henüz ciro getiren ürün bulunmuyor.</p>');
+                    $container.html(topHtml);
+                } else {
+                    $container.html('<p style="color: #64748b; font-size: 13px;">Bugün için henüz ciro getiren ürün bulunmuyor.</p>');
+                }
             }
-        }
-    });
+        });
+    }
+
+    // 1. Sayfa ilk açıldığında verileri anında getir
+    hbtFetchTopProducts();
+
+    // 2. Her 60.000 milisaniyede (Tam 1 Dakika) bir arka planda otomatik güncelle
+    setInterval(hbtFetchTopProducts, 60000);
+
 });
 </script>
