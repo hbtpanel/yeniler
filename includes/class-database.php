@@ -1275,6 +1275,7 @@ class HBT_Database {
         // 1. İptal, İade ve Tedarik Edilemeyenleri dışlayarak Net Kârı ve Ciroyu Çek
         $row = $wpdb->get_row( $wpdb->prepare(
             "SELECT 
+                COUNT(id) AS total_orders,
                 COALESCE(SUM(net_profit), 0) AS net_profit,
                 COALESCE(SUM(total_price), 0) AS revenue
              FROM {$orders_table}
@@ -1283,7 +1284,8 @@ class HBT_Database {
             $start_dt, $end_dt
         ), ARRAY_A );
 
-        $net_profit = (float) ($row['net_profit'] ?? 0);
+        $total_orders = (int) ($row['total_orders'] ?? 0);
+		$net_profit = (float) ($row['net_profit'] ?? 0);
         $revenue    = (float) ($row['revenue'] ?? 0);
 
         // 2. İlgili Tarih Aralığına Düşen Reklam Giderlerini Bul ve Kârdan Çıkar
@@ -1298,6 +1300,7 @@ class HBT_Database {
         $ad_expense = (float) $wpdb->get_var( $ad_sql );
 
         return array(
+			'total_orders' => $total_orders,
             'net_profit' => $net_profit - $ad_expense,
             'revenue'    => $revenue
         );

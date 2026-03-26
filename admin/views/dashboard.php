@@ -43,8 +43,8 @@ defined( 'ABSPATH' ) || exit;
      <h3 class="hbt-widget-title">
         <span class="dashicons dashicons-chart-bar"></span> Brüt Ciro Özeti
     </h3>
-    <div class="hbt-kpi-grid">
-        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative; grid-column: span 2;">
+    <div class="hbt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative;">
             <div id="hbt-rev-today-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-cart"></span> Bugün Ciro</span>
             <span class="hbt-card-value" id="hbt-rev-today" style="font-size: 24px;">0.00 ₺</span>
@@ -52,7 +52,7 @@ defined( 'ABSPATH' ) || exit;
                 Dün: <span id="hbt-rev-yesterday" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
             </span>
         </div>
-        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative; grid-column: span 2;">
+        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative;">
             <div id="hbt-rev-week-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-chart-pie"></span> Bu Hafta Ciro</span>
             <span class="hbt-card-value" id="hbt-rev-week" style="font-size: 24px;">0.00 ₺</span>
@@ -60,7 +60,7 @@ defined( 'ABSPATH' ) || exit;
                 Geçen Hft: <span id="hbt-rev-lastweek" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
             </span>
         </div>
-        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative; grid-column: span 2;">
+        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative;">
             <div id="hbt-rev-month-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-chart-line"></span> Bu Ay Ciro</span>
             <span class="hbt-card-value" id="hbt-rev-month" style="font-size: 24px;">0.00 ₺</span>
@@ -68,13 +68,21 @@ defined( 'ABSPATH' ) || exit;
                 Geçen Ay: <span id="hbt-rev-lastmonth" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
             </span>
         </div>
+        <div class="hbt-card hbt-card-compact hbt-card-revenue" style="position: relative;">
+            <div id="hbt-orders-today-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
+            <span class="hbt-card-label"><span class="dashicons dashicons-clipboard"></span> Bugün Sipariş</span>
+            <span class="hbt-card-value" style="font-size: 24px; color: #8B5CF6;"><span id="hbt-orders-today">0</span> <span style="font-size: 16px;">Adet</span></span>
+            <span style="font-size: 13px; color: var(--hbt-text-muted); margin-top: 8px; font-weight: 500;">
+                Dün: <span id="hbt-orders-yesterday" style="font-weight: 700; color: var(--hbt-text-main);">0</span> Adet
+            </span>
+        </div>
     </div>
 
-    <h3 class="hbt-widget-title">
+   <h3 class="hbt-widget-title">
         <span class="dashicons dashicons-money-alt"></span> Net Kâr Özeti (Tüm Giderler Düşülmüş)
     </h3>
-    <div class="hbt-kpi-grid">
-       <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative; grid-column: span 2;">
+    <div class="hbt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+       <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative;">
             <div id="hbt-profit-today-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-calendar-alt"></span> Bugün Net Kâr</span>
             <span class="hbt-card-value" id="hbt-profit-today" style="font-size: 24px;">0.00 ₺</span>
@@ -82,7 +90,7 @@ defined( 'ABSPATH' ) || exit;
                 Dün: <span id="hbt-profit-yesterday" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
             </span>
         </div>
-        <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative; grid-column: span 2;">
+        <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative;">
             <div id="hbt-profit-week-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-calendar"></span> Bu Hafta Net Kâr</span>
             <span class="hbt-card-value" id="hbt-profit-week" style="font-size: 24px;">0.00 ₺</span>
@@ -90,12 +98,20 @@ defined( 'ABSPATH' ) || exit;
                 Geçen Hft: <span id="hbt-profit-lastweek" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
             </span>
         </div>
-        <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative; grid-column: span 2;">
+        <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative;">
             <div id="hbt-profit-month-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
             <span class="hbt-card-label"><span class="dashicons dashicons-portfolio"></span> Bu Ay Net Kâr</span>
             <span class="hbt-card-value" id="hbt-profit-month" style="font-size: 24px;">0.00 ₺</span>
             <span style="font-size: 13px; color: var(--hbt-text-muted); margin-top: 8px; font-weight: 500;">
                 Geçen Ay: <span id="hbt-profit-lastmonth" style="font-weight: 700; color: var(--hbt-text-main);">0.00 ₺</span>
+            </span>
+        </div>
+        <div class="hbt-card hbt-card-compact hbt-card-profit" style="position: relative;">
+            <div id="hbt-margin-month-badge" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none;"></div>
+            <span class="hbt-card-label"><span class="dashicons dashicons-chart-pie"></span> Bu Ay Kâr Marjı</span>
+            <span class="hbt-card-value" style="font-size: 24px; font-weight: 800;">%<span id="hbt-margin-month">0.00</span></span>
+            <span style="font-size: 13px; color: var(--hbt-text-muted); margin-top: 8px; font-weight: 500;">
+                Geçen Ay: <span id="hbt-margin-lastmonth" style="font-weight: 700; color: var(--hbt-text-main);">%0.00</span>
             </span>
         </div>
     </div>
@@ -278,6 +294,14 @@ jQuery(document).ready(function($) {
         createTrendBadge(d.revenue_today, d.revenue_yesterday_upto_now, 'hbt-rev-today-badge');
         createTrendBadge(d.revenue_week, d.revenue_last_week_upto_now, 'hbt-rev-week-badge');
         createTrendBadge(d.revenue_month, d.revenue_last_month_upto_now, 'hbt-rev-month-badge');
+        // --- YENİ EKLENEN SİPARİŞ JS KODLARI ---
+        if ($('#hbt-orders-today').length) {
+            $('#hbt-orders-today').text(parseInt(d.order_count_today || 0));
+            $('#hbt-orders-yesterday').text(parseInt(d.order_count_yesterday || 0));
+            // Balonu mevcut sisteminizle mükemmel uyumlu halde oluşturuyoruz
+            createTrendBadge(d.order_count_today, d.order_count_yesterday_upto_now, 'hbt-orders-today-badge');
+        }
+        // --- BİTİŞ ---
 
         // KPI Net Kâr Kartları (Alt metinler hala günün/haftanın tamamını gösterir)
         $('#hbt-profit-today').html(formatMoney(d.profit_today, true));
@@ -291,6 +315,33 @@ jQuery(document).ready(function($) {
         createTrendBadge(d.profit_today, d.profit_yesterday_upto_now, 'hbt-profit-today-badge'); 
         createTrendBadge(d.profit_week, d.profit_last_week_upto_now, 'hbt-profit-week-badge');
         createTrendBadge(d.profit_month, d.profit_last_month_upto_now, 'hbt-profit-month-badge');
+
+        // --- YENİ EKLENEN: KÂR MARJI HESAPLAMALARI VE BALONU ---
+        if ($('#hbt-margin-month').length) {
+            // 1. Bu ayki net marjı hesapla (Kâr / Ciro * 100)
+            var revMonth = parseFloat(d.revenue_month || 0);
+            var profMonth = parseFloat(d.profit_month || 0);
+            var marginMonth = revMonth > 0 ? (profMonth / revMonth) * 100 : 0;
+            
+            // 2. Geçen ayın TAMAMININ marjını hesapla
+            var revLastMonth = parseFloat(d.revenue_last_month || 0);
+            var profLastMonth = parseFloat(d.profit_last_month || 0);
+            var marginLastMonth = revLastMonth > 0 ? (profLastMonth / revLastMonth) * 100 : 0;
+            
+            // 3. Geçen ay "Bu Saate Kadar" olan marjı hesapla (Sağ üstteki balon için)
+            var revLastMonthUptoNow = parseFloat(d.revenue_last_month_upto_now || 0);
+            var profLastMonthUptoNow = parseFloat(d.profit_last_month_upto_now || 0);
+            var marginLastMonthUptoNow = revLastMonthUptoNow > 0 ? (profLastMonthUptoNow / revLastMonthUptoNow) * 100 : 0;
+
+            // Rakamları ekrana bas ve renklendir (Kârda ise yeşil, zararda ise kırmızı)
+            var marginColor = marginMonth >= 0 ? '#10B981' : '#EF4444';
+            $('#hbt-margin-month').text(marginMonth.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2})).parent().css('color', marginColor);
+            $('#hbt-margin-lastmonth').text('%' + marginLastMonth.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+            
+            // Sağ üstteki trend balonunu çalıştır
+            createTrendBadge(marginMonth, marginLastMonthUptoNow, 'hbt-margin-month-badge');
+        }
+        // --- BİTİŞ ---
 
         // Hedef Barını Doldur
         var goal = parseFloat(d.profit_goal);

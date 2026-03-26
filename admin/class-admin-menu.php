@@ -967,9 +967,9 @@ public function ajax_bulk_import_costs(): void {
         // --- YENİ: TREND BALONLARI İÇİN "BU SAATE KADAR" VERİLERİ ---
         $current_time = $dt_today->format('H:i:s');
         
-        // 1. Dün bu saate kadar
+       // 1. Dün bu saate kadar
         $stats_yesterday_upto_now = $wpdb->get_row( $wpdb->prepare(
-            "SELECT COALESCE(SUM(net_profit), 0) AS net_profit, COALESCE(SUM(total_price), 0) AS revenue FROM {$wpdb->prefix}hbt_orders WHERE order_date BETWEEN %s AND %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
+            "SELECT COUNT(id) AS order_count, COALESCE(SUM(net_profit), 0) AS net_profit, COALESCE(SUM(total_price), 0) AS revenue FROM {$wpdb->prefix}hbt_orders WHERE order_date BETWEEN %s AND %s AND status NOT IN ('Cancelled', 'Returned', 'UnSupplied')",
             $yesterday . ' 00:00:00', $yesterday . ' ' . $current_time
         ), ARRAY_A );
         $yesterday_ad = $wpdb->get_var($wpdb->prepare("SELECT SUM(daily_amount) FROM {$wpdb->prefix}hbt_ad_expenses WHERE start_date <= %s AND end_date >= %s", $yesterday, $yesterday));
@@ -1149,6 +1149,9 @@ public function ajax_bulk_import_costs(): void {
             // "Bu Saate Kadar" Verileri (Balonlar İçin)
             'profit_yesterday_upto_now'   => $stats_yesterday_upto_now['net_profit'],
             'revenue_yesterday_upto_now'  => $stats_yesterday_upto_now['revenue'],
+			'order_count_today'              => $stats_today['total_orders'] ?? 0,
+            'order_count_yesterday'          => $stats_yesterday['total_orders'] ?? 0,
+            'order_count_yesterday_upto_now' => $stats_yesterday_upto_now['order_count'] ?? 0,
             'profit_last_week_upto_now'   => $stats_last_week_upto_now['net_profit'],
             'revenue_last_week_upto_now'  => $stats_last_week_upto_now['revenue'],
             'profit_last_month_upto_now'  => $stats_last_month_upto_now['net_profit'],

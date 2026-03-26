@@ -267,6 +267,7 @@
 		}, 16);
 	}
 
+
 	if ($('#profit-today').length) {
 		loadDashboard();
 		setInterval(loadDashboard, 5 * 60 * 1000); // refresh every 5 minutes
