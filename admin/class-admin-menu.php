@@ -44,6 +44,8 @@ class HBT_Admin_Menu {
 		add_action( 'admin_footer', array( $this, 'ios_app_menu_js' ) );
 		add_action( 'wp_ajax_hbt_get_live_usd_rate', array( $this, 'ajax_get_live_usd_rate' ) );
 		add_action( 'wp_ajax_hbt_get_tv_mode_data', array( $this, 'ajax_get_tv_mode_data' ) );
+		add_action( 'wp_ajax_hbt_find_duplicates', array( $this, 'ajax_find_duplicates' ) );
+		add_action( 'wp_ajax_hbt_fix_duplicate', array( $this, 'ajax_fix_duplicate' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_hbt_test_connection', array( $this, 'ajax_test_connection' ) );
@@ -1821,5 +1823,113 @@ public function ajax_bulk_import_costs(): void {
 		});
 		</script>
 		<?php
+	}
+	/**
+	 * AJAX: SADECE AYNI MAĞAZA içindeki aktif mükerrer kayıtları bulur (Çoklu mağaza çakışmasını önler)
+	 */
+	public function ajax_find_duplicates() {
+		$this->verify_ajax();
+		global $wpdb;
+		$orders_table = $wpdb->prefix . 'hbt_orders';
+		$stores_table = $wpdb->prefix . 'hbt_stores'; // Hangi mağaza olduğunu göstermek için eklendi
+
+		// YENİ KORUMA: GROUP BY o.order_number, o.store_id
+		// Böylece sipariş numarası aynı olsa bile farklı mağazalardaysa mükerrer sayılmaz!
+		$results = $wpdb->get_results( "
+			SELECT o.order_number, o.store_id, s.store_name, COUNT(o.id) as c 
+			FROM {$orders_table} o
+			LEFT JOIN {$stores_table} s ON o.store_id = s.id
+			WHERE o.status NOT IN ('Cancelled', 'Returned', 'UnSupplied')
+			GROUP BY o.order_number, o.store_id 
+			HAVING c > 1 
+			ORDER BY c DESC
+		", ARRAY_A );
+
+		wp_send_json_success( $results );
+	}
+
+	/**
+	 * AJAX: Mükerrer kaydı Trendyol API'ye canlı bağlanıp kesin olarak çözer
+	 */
+	public function ajax_fix_duplicate() {
+		$this->verify_ajax();
+		$order_number = sanitize_text_field( $_POST['order_number'] ?? '' );
+		$store_id     = absint( $_POST['store_id'] ?? 0 ); // YENİ: JavaScript'ten gelen nokta atışı mağaza ID'si
+		
+		if ( empty( $order_number ) || empty( $store_id ) ) {
+			wp_send_json_error( 'Sipariş numarası veya mağaza ID eksik.' );
+		}
+
+		global $wpdb;
+		$orders_table = $wpdb->prefix . 'hbt_orders';
+		$items_table  = $wpdb->prefix . 'hbt_order_items';
+
+		$db = HBT_Database::instance();
+		$store = $db->get_store( $store_id ); // Rastgele değil, tam olarak tıklanan mağazayı alıyoruz
+		
+		if ( ! $store ) {
+			wp_send_json_error( 'Mağaza bulunamadı.' );
+		}
+
+		require_once HBT_TPT_PLUGIN_DIR . 'includes/class-trendyol-api.php';
+		$api = new HBT_Trendyol_API( $store );
+
+		// 2. SADECE bu siparişi (ve bu mağaza için olan paketlerini) API'den çek
+		$endpoint = "suppliers/{$store->supplier_id}/orders?orderNumber={$order_number}";
+		$response = $api->make_request( $endpoint );
+		
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( 'Trendyol API Hatası: ' . $response->get_error_message() );
+		}
+		
+		$api_orders_raw = (array) ( $response['content'] ?? array() );
+		
+		$reflection = new ReflectionClass( $api );
+		$method = $reflection->getMethod( 'normalize_orders' );
+		$method->setAccessible( true );
+		$orders_to_sync = $method->invoke( $api, $api_orders_raw );
+
+		$valid_trendyol_ids = array();
+		foreach ( $orders_to_sync as $api_order ) {
+			$valid_trendyol_ids[] = (string) $api_order['trendyol_id'];
+		}
+
+		// 4. DB'deki mevcut kayıtları kontrol et (YENİ KORUMA: Sadece o store_id'ye ait olanlara bak!)
+		$db_orders = $wpdb->get_results( $wpdb->prepare( "SELECT id, trendyol_id FROM {$orders_table} WHERE order_number = %s AND store_id = %d", $order_number, $store_id ) );
+		
+		$deleted_count = 0;
+		foreach ( $db_orders as $db_order ) {
+			if ( ! in_array( (string) $db_order->trendyol_id, $valid_trendyol_ids, true ) ) {
+				$wpdb->delete( $items_table, array( 'order_id' => $db_order->id ) );
+				$wpdb->delete( $orders_table, array( 'id' => $db_order->id ) );
+				$deleted_count++;
+			}
+		}
+
+		require_once HBT_TPT_PLUGIN_DIR . 'includes/class-profit-calculator.php';
+		$calculator = new HBT_Profit_Calculator();
+
+		foreach ( $orders_to_sync as $api_order ) {
+			$api_order['store_id'] = $store->id;
+			$save_result = $db->save_order( $api_order );
+			
+			if ( $save_result && isset( $save_result['id'] ) ) {
+				$order_id = $save_result['id'];
+				
+				foreach ( $api_order['items'] as $item ) {
+					$item['order_id'] = $order_id;
+					$item['store_id'] = $store->id;
+					$db->save_order_item( $item );
+				}
+				
+				$calculator->calculate_order( $order_id );
+			}
+		}
+
+		if ( $deleted_count > 0 ) {
+			wp_send_json_success( "Harika! {$deleted_count} adet hatalı/hayalet paket silindi ve gerçek sipariş API'den çekilerek düzeltildi." );
+		} else {
+			wp_send_json_success( "Hatalı paket bulunamadı ancak siparişin tüm fiyat ve kâr verileri API'den anlık olarak tazelendi." );
+		}
 	}
 }

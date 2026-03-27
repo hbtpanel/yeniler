@@ -86,6 +86,98 @@ $queue_count = is_array($queue) ? count($queue) : 0;
                     </div>
                 </div>
             </div>
+            <div class="hbt-card" style="margin-top: 30px; border-left: 4px solid #8b5cf6;">
+        <h3 style="margin-top: 0; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <span class="dashicons dashicons-admin-tools" style="color: #8b5cf6;"></span> Sistem Araçları & Hata Ayıklama
+        </h3>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">
+            Trendyol bazen aynı siparişi parçalara bölerek hatalı kâr/zarar hesaplamalarına yol açabilir. Aşağıdaki araç ile veritabanını tarayıp çift kopyalanmış siparişlerin eski (hatalı) olanlarını tek tuşla temizleyebilirsiniz.
+        </p>
+        
+        <button type="button" class="hbt-btn hbt-btn-outline" id="btn-find-duplicates" style="border-color: #8b5cf6; color: #8b5cf6;">
+            <span class="dashicons dashicons-search"></span> Mükerrer Siparişleri Tarat
+        </button>
+
+        <div id="duplicate-results-container" style="margin-top: 20px; display: none;">
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Sipariş Numarası</th>
+                        <th>Kayıt Sayısı</th>
+                        <th style="text-align: right;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="duplicate-results-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+   <script>
+    jQuery(document).ready(function($) {
+        // Mükerrer Tarama Butonu
+        $('#btn-find-duplicates').on('click', function() {
+            var $btn = $(this);
+            $btn.html('<span class="dashicons dashicons-update hbt-spin"></span> Taranıyor...');
+            
+            $.post(hbtTpt.ajaxurl, { action: 'hbt_find_duplicates', nonce: hbtTpt.nonce }, function(res) {
+                $btn.html('<span class="dashicons dashicons-search"></span> Mükerrer Siparişleri Tarat');
+                
+                var $tbody = $('#duplicate-results-body');
+                $tbody.empty();
+                
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(function(item) {
+                        // YENİ: Mağaza adını da ekrana basıyoruz
+                        var storeName = item.store_name ? item.store_name : 'Bilinmeyen Mağaza';
+                        
+                        $tbody.append(`
+                            <tr>
+                                <td>
+                                    <strong>${item.order_number}</strong><br>
+                                    <small style="color: #64748b;">Mağaza: ${storeName}</small>
+                                </td>
+                                <td><span style="background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 12px; font-weight: bold;">${item.c} Adet</span></td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="button button-primary btn-fix-duplicate" data-order="${item.order_number}" data-store="${item.store_id}">
+                                        Düzelt (Fazlalığı Sil)
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                    $('#duplicate-results-container').slideDown();
+                } else {
+                    $tbody.append('<tr><td colspan="3" style="text-align: center; color: #10b981; font-weight: bold;">Harika! Sistemde mükerrer veya hatalı sipariş kaydı bulunmuyor.</td></tr>');
+                    $('#duplicate-results-container').slideDown();
+                }
+            });
+        });
+
+        // Düzelt Butonu
+        $(document).on('click', '.btn-fix-duplicate', function() {
+            var $btn = $(this);
+            var orderNo = $btn.data('order');
+            var storeId = $btn.data('store'); // YENİ: Mağaza ID'sini arka plana gönder
+            
+            if(confirm(orderNo + ' numaralı siparişin hatalı eski kayıtları silinecek ve en doğru/güncel olanı bırakılacak. Onaylıyor musunuz?')) {
+                $btn.text('Düzeltiliyor...').prop('disabled', true);
+                
+                $.post(hbtTpt.ajaxurl, { action: 'hbt_fix_duplicate', order_number: orderNo, store_id: storeId, nonce: hbtTpt.nonce }, function(res) {
+                    if (res.success) {
+                        $btn.closest('tr').css('background-color', '#d1fae5').fadeOut(800, function() {
+                            $(this).remove();
+                        });
+                        alert('Başarılı: ' + res.data);
+                    } else {
+                        alert('Hata: ' + res.data);
+                        $btn.text('Tekrar Dene').prop('disabled', false);
+                    }
+                });
+            }
+        });
+    });
+    </script>
         </div>
 
         <div class="hbt-tab-content" id="tab-sync" style="display:none;">
