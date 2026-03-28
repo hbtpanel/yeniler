@@ -27,7 +27,7 @@ $filters = array(
         </h1>
     </div>
 
-    <div class="hbt-card" style="margin-bottom: 24px;">
+    <div class="hbt-card" id="hbt-orders-filter-card" style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
             <h3 class="hbt-widget-title" style="margin: 0 !important; border-bottom: none; padding-bottom: 0;">
                 <span class="dashicons dashicons-filter"></span> Gelişmiş Filtreleme
@@ -105,11 +105,14 @@ $filters = array(
                 <button type="button" id="hbt-export-excel-btn" class="hbt-btn hbt-btn-outline btn-export" style="margin-left: auto; color: #059669 !important; border-color: #A7F3D0 !important; background: #ECFDF5 !important;">
                     <span class="dashicons dashicons-media-spreadsheet"></span> Excel İndir
                 </button>
+                <button type="button" id="btn-orders-tv-mode" class="hbt-btn hbt-btn-outline" style="margin-left: 10px; color: #8b5cf6 !important; border-color: #8b5cf6 !important; background: #f5f3ff !important;">
+                    <span class="dashicons dashicons-desktop"></span> TV Modu
+                </button>
             </div>
         </form>
     </div>
 
-    <div class="hbt-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+    <div class="hbt-card" id="hbt-orders-table-card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
         <table class="wp-list-table widefat fixed striped" id="hbt-orders-server-table" style="width:100%; border: none; margin: 0;">
             <thead>
                 <tr>
@@ -144,7 +147,7 @@ $filters = array(
         </table>
     </div>
 
-    <div class="hbt-card" style="border-left: 4px solid var(--hbt-info); padding: 20px;">
+    <div class="hbt-card" id="hbt-orders-info-card" style="border-left: 4px solid var(--hbt-info); padding: 20px;">
         <h4 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; color: var(--hbt-primary); display: flex; align-items: center; gap: 8px;">
             <span class="dashicons dashicons-info" style="color: var(--hbt-info);"></span> Tablo Renk ve İşaret Açıklamaları
         </h4>
@@ -233,7 +236,7 @@ $filters = array(
     </div>
 
 </div>
-
+<div id="hbt-toast-container"></div>
 <style>
 /* Modal İçi Select2 - Genişleyen Kutu ve Alt Satıra Geçme Ayarları */
 #product-filter-modal .select2-container .select2-selection--multiple {
@@ -352,6 +355,124 @@ $filters = array(
 .hbt-wrap table.wp-list-table tbody td:last-child {
     padding-right: 24px !important;
 }
+
+/* --- YENİ EKLENEN: SAĞ ALT BİLDİRİM BALONU (TOAST) --- */
+    #hbt-toast-container {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none; /* Tıklamaları engellemesin diye */
+    }
+
+    .hbt-toast-message {
+        background: #10b981; /* Neon Yeşil */
+        color: #ffffff;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        font-size: 15px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transform: translateX(120%); /* Başlangıçta ekranın dışında sağda */
+        animation: toastSlideIn 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+
+    .hbt-toast-hiding {
+        animation: toastSlideOut 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+
+    @keyframes toastSlideIn {
+        to { transform: translateX(0); }
+    }
+    @keyframes toastSlideOut {
+        to { transform: translateX(120%); opacity: 0; }
+    }
+
+/* --- YENİ EKLENEN: GÖZ TAKİBİ VE TABLO OKUNABİLİRLİK İYİLEŞTİRMELERİ --- */
+
+    /* 1. Renk Bozmayan Zebra Efekti (Işığı %3 Kısar) */
+    #hbt-orders-server-table tbody tr:nth-child(even) td {
+        filter: brightness(0.97); 
+    }
+
+    /* 4. Fare imlecini metin seçici (I) yerine standart ok (default) yap */
+    #hbt-orders-server-table tbody td {
+        cursor: default !important;
+    }
+
+    /* 3. Dikey Finans Bölgesi Ayırıcıları */
+    /* 4. Sütun (Toplam TL) soluna ince kesik çizgi atarak Parasal Verileri başlatır */
+    #hbt-orders-server-table thead th:nth-child(4),
+    #hbt-orders-server-table tbody td:nth-child(4) {
+        border-left: 2px dashed rgba(100, 116, 139, 0.3) !important; 
+    }
+    /* 11. Sütun (Durum) soluna ince kesik çizgi atarak Parasal Verileri bitirir */
+    #hbt-orders-server-table thead th:nth-child(11),
+    #hbt-orders-server-table tbody td:nth-child(11) {
+        border-left: 2px dashed rgba(100, 116, 139, 0.3) !important; 
+    }
+    /* --- YENİ EKLENEN: TV MODU (TAM EKRAN) KUSURSUZ TASARIM --- */
+    
+    /* Tam Ekrana geçildiğinde her türlü scroll'u (kaymayı) iptal et */
+    :fullscreen body { background: #ffffff !important; overflow: hidden !important; }
+    :-webkit-full-screen body { background: #ffffff !important; overflow: hidden !important; }
+    :-moz-full-screen body { background: #ffffff !important; overflow: hidden !important; }
+    
+    /* WP Menülerini, Filtreleri ve DataTables Arama/Sayfalama Araçlarını Gizle */
+    :fullscreen #wpadminbar, 
+    :fullscreen #adminmenuback, 
+    :fullscreen #adminmenuwrap, 
+    :fullscreen #wpfooter, 
+    :fullscreen .update-nag, 
+    :fullscreen .notice,
+    :fullscreen .hbt-page-header,
+    :fullscreen #hbt-orders-filter-card,
+    :fullscreen #hbt-orders-info-card,
+    :fullscreen .dataTables_length,
+    :fullscreen .dataTables_filter,
+    :fullscreen .dataTables_info,
+    :fullscreen .dataTables_paginate {
+        display: none !important;
+    }
+
+    /* Tabloyu ekranın tamamına yay (Kenar boşluklarını sil) */
+    :fullscreen #wpcontent { margin: 0 !important; padding: 0 !important; }
+    :fullscreen .hbt-tpt-wrap { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+    
+    :fullscreen #hbt-orders-table-card {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        height: 100vh !important;
+        overflow: hidden !important; /* KESİNLİKLE KAYMA OLMASIN */
+    }
+
+    /* TV'den uzaktan okunabilmesi için tablo fontlarını hafif büyütelim */
+    :fullscreen #hbt-orders-server-table thead th {
+        padding: 24px 12px !important;
+        font-size: 16px !important;
+        background: #f8fafc !important;
+    }
+    :fullscreen #hbt-orders-server-table tbody td {
+        padding: 20px 12px !important;
+        font-size: 15px !important;
+    }
+
+    /* TV Modunda çıkan bildirim balonu (Toast) çok daha devasa ve okunaklı olsun */
+    :fullscreen .hbt-toast-message {
+        font-size: 24px !important;
+        padding: 24px 32px !important;
+        bottom: 50px !important;
+        right: 50px !important;
+    }
 </style>
 
 <script>
@@ -409,10 +530,20 @@ jQuery(document).ready(function($) {
             "lengthMenu": [ [25, 50, 100, 250, 500], [25, 50, 100, 250, 500] ],
             "searching": true,
             "searchDelay": 800,
-            "columns": [
+           "columns": [
                 { "orderable": false }, // Sipariş No
                 { "orderable": true },  // Tarih
-                { "orderable": true },  // Müşteri
+                { 
+                    "orderable": true,  // Müşteri
+                    "render": function ( data, type, row ) {
+                        if ( type === 'display' && data ) {
+                            var textData = String(data); 
+                            // Alt çizgi ve soru işareti kaldırıldı. Tertemiz bir görünüm sağlandı.
+                            return '<span title="' + textData.replace(/"/g, '&quot;') + '" style="max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom;">' + textData + '</span>';
+                        }
+                        return data;
+                    }
+                },
                 { "orderable": true },  // Toplam
                 { "orderable": true },  // Maliyet
                 { "orderable": true },  // Komisyon
@@ -420,8 +551,17 @@ jQuery(document).ready(function($) {
                 { "orderable": false }, // Sabit Gider
                 { "orderable": true },  // Net Kar
                 { "orderable": true },  // Marj
-                { "orderable": false }, // Durum  <--- VİRGÜL EKLENDİ
-                { "orderable": false }  // YENİ: Mağaza
+                { "orderable": false }, // Durum
+                { 
+                    "orderable": false, // Mağaza
+                    "render": function ( data, type, row ) {
+                        if ( type === 'display' && data ) {
+                            var textData = String(data);
+                            return '<span title="' + textData.replace(/"/g, '&quot;') + '" style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom;">' + textData + '</span>';
+                        }
+                        return data;
+                    }
+                }
             ],
             "columnDefs": [
                 {
@@ -513,6 +653,41 @@ jQuery(document).ready(function($) {
             window.location.href = exportUrl;
         });
 
+// --- TV MODU (TAM EKRAN) TETİKLEYİCİSİ (GARANTİ YERLEŞİM) ---
+        $('#btn-orders-tv-mode').on('click', function(e) {
+            e.preventDefault();
+            
+            var elem = document.documentElement;
+            
+            try {
+                if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                    // Tam Ekrana Gir
+                    if (elem.requestFullscreen) {
+                        elem.requestFullscreen();
+                    } else if (elem.msRequestFullscreen) {
+                        elem.msRequestFullscreen();
+                    } else if (elem.mozRequestFullScreen) {
+                        elem.mozRequestFullScreen();
+                    } else if (elem.webkitRequestFullscreen) {
+                        elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                    }
+                } else {
+                    // Tam Ekrandan Çık
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    }
+                }
+            } catch (err) {
+                alert("TV Modu tarayıcı tarafından engellendi: " + err.message);
+            }
+        });
+        // --- BİTİŞ: TV MODU ---
         $('.btn-order-date').on('click', function(e) {
             e.preventDefault();
             $('.btn-order-date').removeClass('hbt-btn-primary').addClass('hbt-btn-outline');
@@ -559,5 +734,85 @@ jQuery(document).ready(function($) {
             ordersTable.ajax.reload();
         });
     }
+    // --- YENİ EKLENEN: AKILLI CANLI YENİLEME VE PARLAMA MOTORU ---
+    
+    // Ekranda görünen mevcut sipariş numaralarını hafızada tutacağımız dizi
+    var currentOrderNumbers = [];
+    
+    // Tablo her çizildiğinde (ilk açılışta veya sayfa değişiminde) mevcut siparişleri kaydet
+    ordersTable.on('draw.dt', function () {
+        // Eğer bu bir 'canlı yenileme' işlemi değilse (ilk yükleme, arama, sayfa değiştirme vs ise) hafızayı tazele
+        if (!ordersTable.context[0].jqXHR || !ordersTable.context[0].jqXHR.isLiveUpdate) {
+            currentOrderNumbers = [];
+            ordersTable.rows().every(function (rowIdx, tableLoop, rowLoop) {
+                var data = this.data();
+                // Sipariş numarası sütunundaki veriyi al (HTML etiketleri varsa temizle)
+                var orderNoRaw = data[0] || '';
+                var match = orderNoRaw.match(/>([^<]+)</); // HTML içindeki metni bulmaya çalış
+                var orderNo = match ? match[1].trim() : orderNoRaw.trim();
+                
+                if(orderNo) currentOrderNumbers.push(orderNo);
+            });
+        }
+    });
+
+   // --- AKILLI CANLI YENİLEME VE TOAST BİLDİRİM MOTORU ---
+    var currentOrderNumbers = [];
+    
+    ordersTable.on('draw.dt', function () {
+        if (!ordersTable.context[0].jqXHR || !ordersTable.context[0].jqXHR.isLiveUpdate) {
+            currentOrderNumbers = [];
+            ordersTable.rows().every(function (rowIdx, tableLoop, rowLoop) {
+                var data = this.data();
+                var orderNoRaw = data[0] || '';
+                var match = orderNoRaw.match(/>([^<]+)</);
+                var orderNo = match ? match[1].trim() : orderNoRaw.trim();
+                if(orderNo) currentOrderNumbers.push(orderNo);
+            });
+        }
+    });
+
+    setInterval(function() {
+        var isToday = $('.btn-order-date[data-type="today"]').hasClass('hbt-btn-primary');
+        var noDateFilter = !$('input[name="date_from"]').val() && !$('input[name="date_to"]').val();
+        
+        if (isToday || noDateFilter) {
+            
+            ordersTable.ajax.reload(function(json) {
+                var newOrdersCount = 0; // Yeni gelen siparişleri sayacağız
+                
+                ordersTable.rows().every(function (rowIdx, tableLoop, rowLoop) {
+                    var data = this.data();
+                    var orderNoRaw = data[0] || '';
+                    var match = orderNoRaw.match(/>([^<]+)</);
+                    var orderNo = match ? match[1].trim() : orderNoRaw.trim();
+
+                    if (orderNo && currentOrderNumbers.indexOf(orderNo) === -1) {
+                        currentOrderNumbers.push(orderNo);
+                        newOrdersCount++; // Sayacı artır
+                    }
+                });
+                
+                // YENİ: EĞER YENİ SİPARİŞ VARSA SAĞ ALTTAN BALON (TOAST) ÇIKART
+                if (newOrdersCount > 0) {
+                    // Balonu oluştur
+                    var $toast = $('<div class="hbt-toast-message"><span class="dashicons dashicons-bell" style="font-size: 20px; width: 20px; height: 20px;"></span> ' + newOrdersCount + ' Adet yeni sipariş geldi!</div>');
+                    
+                    // Konteynere ekle (Ekranda belirecek)
+                    $('#hbt-toast-container').append($toast);
+                    
+                    // Tam 5 saniye (5000ms) sonra kaybolma animasyonunu başlat ve DOM'dan sil
+                    setTimeout(function() {
+                        $toast.addClass('hbt-toast-hiding');
+                        setTimeout(function() { $toast.remove(); }, 500); // Animasyon bitince HTML'i temizle
+                    }, 5000);
+                }
+                
+            }, false); // Sayfalamayı bozma
+            
+            ordersTable.context[0].jqXHR.isLiveUpdate = true;
+        }
+    }, 60000); // 60 Saniyede bir kontrol et
 });
+
 </script>
