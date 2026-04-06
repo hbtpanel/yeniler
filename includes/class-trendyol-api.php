@@ -429,12 +429,9 @@ class HBT_Trendyol_API {
 		return $data ?? array();
 	}
 
-	// -------------------------------------------------------------------------
-	// Normalizers
-	// -------------------------------------------------------------------------
-
 	/**
 	 * Normalize raw API order data into a consistent structure.
+	 * Trendyol 6 Nisan 2026 API güncellemesine tam uyumludur.
 	 *
 	 * @param  array $raw_orders Raw API order list.
 	 * @return array
@@ -462,8 +459,8 @@ class HBT_Trendyol_API {
 				$commission_rate   = null;
 
 				// Possible field names for commission amount/rate.
-$possible_amount_keys = array( 'commissionAmount', 'commission_amount', 'commissionValue', 'commissionAmountTL', 'sellerCommission', 'feeAmount' );
-$possible_rate_keys   = array( 'commission', 'commissionRate', 'commission_rate', 'commissionPercent', 'commissionPercentRate' );
+				$possible_amount_keys = array( 'commissionAmount', 'commission_amount', 'commissionValue', 'commissionAmountTL', 'sellerCommission', 'feeAmount' );
+				$possible_rate_keys   = array( 'commission', 'commissionRate', 'commission_rate', 'commissionPercent', 'commissionPercentRate' );
 
 				foreach ( $possible_amount_keys as $k ) {
 					if ( isset( $line[ $k ] ) && $line[ $k ] !== '' ) {
@@ -495,32 +492,39 @@ $possible_rate_keys   = array( 'commission', 'commissionRate', 'commission_rate'
 					}
 				}
 
-				// Determine qty/price/line_total/discount with common fallbacks.
-				$quantity   = isset( $line['quantity'] ) ? (int) $line['quantity'] : ( isset( $line['qty'] ) ? (int) $line['qty'] : 1 );
-				$unit_price = isset( $line['unitPrice'] ) ? (float) $line['unitPrice'] : ( isset( $line['price'] ) ? (float) $line['price'] : 0.0 );
+				// ---- TRENDYOL 6 NİSAN API GÜNCELLEMESİ ALANLARI ----
+
+				$quantity = isset( $line['quantity'] ) ? (int) $line['quantity'] : ( isset( $line['qty'] ) ? (int) $line['qty'] : 1 );
+				
+				// Eski: 'price' -> Yeni: 'lineUnitPrice'
+				$unit_price = isset( $line['lineUnitPrice'] ) ? (float) $line['lineUnitPrice'] : ( isset( $line['price'] ) ? (float) $line['price'] : 0.0 );
+				
+				// Eski: 'discount' -> Yeni: 'lineTotalDiscount' veya 'lineSellerDiscount'
+				$discount = isset( $line['lineTotalDiscount'] ) ? (float) $line['lineTotalDiscount'] : ( isset( $line['lineSellerDiscount'] ) ? (float) $line['lineSellerDiscount'] : ( isset( $line['discount'] ) ? (float) $line['discount'] : 0.0 ) );
+				
 				$line_total = isset( $line['lineTotal'] ) ? (float) $line['lineTotal'] : ( isset( $line['totalPrice'] ) ? (float) $line['totalPrice'] : ( $unit_price * $quantity ) );
-				$discount   = isset( $line['discount'] ) ? (float) $line['discount'] : 0.0;
+				
 				$vat_amount = isset( $line['vatAmount'] ) ? (float) $line['vatAmount'] : 0.0;
 
-				// If only rate provided, compute amount from rate + line_total.
+				// Eğer sadece komisyon oranı verildiyse (tutar yoksa), tutarı hesapla.
 				if ( ( $commission_amount === 0.0 || $commission_amount === null ) && $commission_rate !== null ) {
-					// Interpret commission_rate heuristically:
-					// - if >= 1 => percent (e.g. 5.5 means 5.5%)
-					// - if between 0 and 1 => fraction (e.g. 0.055 means 5.5%)
 					if ( $commission_rate >= 1.0 ) {
 						$commission_amount = round( ( $line_total * ( $commission_rate / 100.0 ) ), 4 );
 					} else {
 						$commission_amount = round( ( $line_total * $commission_rate ), 4 );
 					}
-				}// Eğer sadece komisyon tutarı geldiyse (oran null ise), oranı tutardan geriye doğru hesapla.
+				} // Eğer sadece komisyon tutarı geldiyse (oran null ise), oranı tutardan geriye doğru hesapla.
 				elseif ( $commission_rate === null && $commission_amount > 0 && $line_total > 0 ) {
 					$commission_rate = round( ( $commission_amount / $line_total ) * 100, 2 );
 				}
 
+				// Eski 'sku' kaldırıldı, 'merchantSku' ise 'stockCode' oldu.
+				$sku = $line['stockCode'] ?? $line['merchantSku'] ?? $line['sku'] ?? '';
+
 				$items[] = array(
 					'barcode'           => $line['barcode'] ?? $line['gtin'] ?? '',
-					'sku'               => $line['stockCode'] ?? $line['sku'] ?? '',
-					'product_name'      => $line['title'] ?? $line['productName'] ?? '',
+					'sku'               => $sku,
+					'product_name'      => $line['productName'] ?? $line['title'] ?? '',
 					'quantity'          => $quantity,
 					'unit_price'        => $unit_price,
 					'line_total'        => $line_total,
@@ -535,8 +539,21 @@ $possible_rate_keys   = array( 'commission', 'commissionRate', 'commission_rate'
 			$customer_first = $raw['shipmentAddress']['firstName'] ?? ( $raw['customerFirstName'] ?? '' );
 			$customer_last  = $raw['shipmentAddress']['lastName'] ?? ( $raw['customerLastName'] ?? '' );
 
+			// ---- TRENDYOL 6 NİSAN API GÜNCELLEMESİ (SİPARİŞ ANA VERİSİ) ----
+			// 'id' -> 'shipmentPackageId'
+			$trendyol_id = (int) ( $raw['shipmentPackageId'] ?? $raw['id'] ?? 0 );
+			
+			// 'grossAmount' -> 'packageGrossAmount'
+			$gross_amount = (float) ( $raw['packageGrossAmount'] ?? $raw['grossAmount'] ?? $raw['totalGrossAmount'] ?? 0 );
+			
+			// 'totalDiscount' -> 'packageTotalDiscount' veya 'packageSellerDiscount'
+			$total_discount = (float) ( $raw['packageTotalDiscount'] ?? $raw['packageSellerDiscount'] ?? $raw['totalDiscount'] ?? 0 );
+			
+			// 'totalPrice' -> 'packageTotalPrice'
+			$total_price = (float) ( $raw['packageTotalPrice'] ?? $raw['totalPrice'] ?? $raw['paidPrice'] ?? 0 );
+
 			$orders[] = array(
-				'trendyol_id'    => (int) ( $raw['id'] ?? 0 ),
+				'trendyol_id'    => $trendyol_id,
 				'order_number'   => $raw['orderNumber'] ?? $raw['order_no'] ?? '',
 				'status'         => $raw['status'] ?? '',
 				'order_date'     => isset( $raw['orderDate'] ) ? gmdate( 'Y-m-d H:i:s', (int) ( $raw['orderDate'] / 1000 ) ) : ( $raw['orderDate'] ?? '' ),
@@ -544,9 +561,9 @@ $possible_rate_keys   = array( 'commission', 'commissionRate', 'commission_rate'
 				'shipping_city'  => $raw['shipmentAddress']['city'] ?? $raw['shippingCity'] ?? '',
 				'cargo_provider' => $raw['cargoProviderName'] ?? '',
 				'items'          => $items,
-				'gross_amount'   => (float) ( $raw['grossAmount'] ?? $raw['totalGrossAmount'] ?? 0 ),
-				'total_discount' => (float) ( $raw['totalDiscount'] ?? 0 ),
-				'total_price'    => (float) ( $raw['totalPrice'] ?? $raw['paidPrice'] ?? 0 ),
+				'gross_amount'   => $gross_amount,
+				'total_discount' => $total_discount,
+				'total_price'    => $total_price,
 			);
 		}
 
